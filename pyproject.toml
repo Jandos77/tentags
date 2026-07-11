@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tentags"
-version = "0.1.4"
-description = "A lightweight declarative document markup language and DSL focused on high-fidelity tables and spreadsheet grids."
+version = "0.1.5"
+description = "A declarative template language and Intermediate Representation (IR) for automated HTML and Excel table/document generation."
 readme = "README.md"
 authors = [
     { name = "Zhandos Mambetali", email = "zhandos.mambetali@gmail.com" }

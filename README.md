@@ -10,17 +10,47 @@
 [![Python versions](https://img.shields.io/pypi/pyversions/tentags.svg)](https://pypi.org/project/tentags/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-**TenTags** is a lightweight declarative document markup language and DSL focused on generating high-fidelity tables and spreadsheet grids.
+**TenTags** is a declarative template language and **Intermediate Representation (IR)** for automated HTML and Excel table and document generation.
 
-### 💡 Why TenTags?
+### 💡 Why TenTags? (A Language for Programs & AI, Not Manual Editing)
 
-Traditional table generators and document export tools often require complex boilerplates, rigid APIs, or verbose configurations. They frequently lack declarative multi-cell grid merges across rows (`rowspan`) and columns (`colspan`), inline typography controls, and the ability to compile directly into both web layouts and native Excel spreadsheets.
+While general markup formats are designed for *humans* to manually write text, **TenTags** is designed specifically as a **Template DSL for programs, server engines, and AI agents**.
 
-**TenTags** solves this by providing a clean, expressive domain-specific language (DSL). By combining a custom lexer, tokenizer, and intermediate AST model (`TableModel`) with dual rendering backends, TenTags gives you:
+Whether you are building backend report pipelines, ERP/CRM accounting modules, invoice generators, or LLM-driven document agents, generating clean TenTags strings via loops and f-strings is orders of magnitude simpler and safer than emitting verbose HTML strings with inline `style=""` or hundreds of lines of `openpyxl` API calls:
+
+```python
+# Programmatically generate high-fidelity reports with dynamic loops and f-strings:
+formula = f'''
+5,4,1,"#ccc","solid",0,40, data(
+    <bg=#1e293b><color=white><b><cm>{report_title}, , , </cm></b></color></bg>;
+    {generated_rows_from_db}
+)'''
+```
+
+### ⚙️ Intermediate Representation (IR) Compiler Architecture
+
+At its core, **TenTags** decouples markup tokenization from rendering by compiling formulas into a unified `TableModel` (AST/IR). Because `TableModel` serves as a clean **Intermediate Representation**, you can compile exact multi-cell grid merges (`<cm>`, `<rm>`), typography (`<fs>`, `<b>`, `<i>`), alignments, and pattern fills (`<bg>`, `<color>`) across multiple backends:
+
+```text
+Text Formula
+     ↓
+   Lexer
+     ↓
+  Tokens
+     ↓
+  Parser
+     ↓
+ TableModel (Intermediate Representation / IR)
+   ↙    ↘
+HTML    Excel (.xlsx)   [Future: PDF, DOCX, Canvas, Flutter...]
+```
+
+- 🎯 **Target Audience**: Backend developers (FastAPI, Django, Flask), ERP/CRM financial engines, automated invoice/receipt generators, and AI/LLM agents.
+- 🤖 **AI & LLM Native**: LLMs generate exact, compact TenTags formulas reliably without CSS layout bugs or Excel API hallucinations.
 - 🔀 **Declarative Grid Merges**: Effortlessly merge cells rightward across columns (`<cm>`) and downward across rows (`<rm>`).
-- 🎨 **Rich Typography & Styling**: Inline control over font size (`<fs>`), bold (`<b>`), italic (`<i>`), horizontal alignment (`<left>`, `<center>`, `<right>`), text color (`<color=>`), and cell fills (`<bg=>`).
-- 📊 **Dual Backend Rendering**: Compile your markup directly to high-fidelity **HTML** strings (`render_html`) or native **Excel (`.xlsx`)** spreadsheets (`render_xlsx`) with faithful `openpyxl` grid merges (`ws.merge_cells`) and fills.
-- ⚡ **Zero Core Dependencies**: Pure Python runtime (`xml.etree.ElementTree`) for DSL parsing and HTML rendering. Optional Excel export via `openpyxl`.
+- 🎨 **Rich Typography & Styling**: Inline control over font size (`<fs>`), bold (`<b>`), italic (`<i>`), alignment (`<left>`, `<center>`, `<right>`), text color (`<color=>`), and cell fills (`<bg=>`).
+- 📊 **Dual Backend Rendering**: Directly compile your IR to high-fidelity **HTML** (`render_html`) or native **Excel (`.xlsx`)** (`render_xlsx`) with true merged cells (`ws.merge_cells`).
+- ⚡ **Zero Core Dependencies**: Pure Python runtime (`xml.etree.ElementTree`) for DSL tokenization and HTML rendering. Optional Excel export via `openpyxl`.
 
 ---
 
