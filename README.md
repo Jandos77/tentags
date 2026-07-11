@@ -12,11 +12,11 @@
 
 **TenTags** is a lightweight declarative document markup language and DSL focused on generating high-fidelity tables and spreadsheet grids.
 
-### 💡 Why TenTags? (Beyond Standard Markdown)
+### 💡 Why TenTags?
 
-Standard Markdown (`| A | B |`) is notoriously rigid when it comes to tables: it cannot merge complex cell grids across rows (`rowspan`) or columns (`colspan`), it lacks background fills and typography controls, and it cannot compile directly to native Excel spreadsheets.
+Traditional table generators and document export tools often require complex boilerplates, rigid APIs, or verbose configurations. They frequently lack declarative multi-cell grid merges across rows (`rowspan`) and columns (`colspan`), inline typography controls, and the ability to compile directly into both web layouts and native Excel spreadsheets.
 
-**TenTags** bridges this gap. By combining a custom lexer, tokenizer, and intermediate AST model (`TableModel`) with dual rendering backends, TenTags gives you:
+**TenTags** solves this by providing a clean, expressive domain-specific language (DSL). By combining a custom lexer, tokenizer, and intermediate AST model (`TableModel`) with dual rendering backends, TenTags gives you:
 - 🔀 **Declarative Grid Merges**: Effortlessly merge cells rightward across columns (`<cm>`) and downward across rows (`<rm>`).
 - 🎨 **Rich Typography & Styling**: Inline control over font size (`<fs>`), bold (`<b>`), italic (`<i>`), horizontal alignment (`<left>`, `<center>`, `<right>`), text color (`<color=>`), and cell fills (`<bg=>`).
 - 📊 **Dual Backend Rendering**: Compile your markup directly to high-fidelity **HTML** strings (`render_html`) or native **Excel (`.xlsx`)** spreadsheets (`render_xlsx`) with faithful `openpyxl` grid merges (`ws.merge_cells`) and fills.
