@@ -10,13 +10,13 @@
 [![Python versions](https://img.shields.io/pypi/pyversions/tentags.svg)](https://pypi.org/project/tentags/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-**TenTags** is a declarative template language and **Intermediate Representation (IR)** for automated HTML and Excel table and document generation.
+**TenTags** is a declarative template language and **Intermediate Representation (IR)** for automated **HTML**, **Excel (`.xlsx`)**, and **PDF** table and document generation.
 
 ### 💡 Why TenTags? (A Language for Programs & AI, Not Manual Editing)
 
 While general markup formats are designed for *humans* to manually write text, **TenTags** is designed specifically as a **Template DSL for programs, server engines, and AI agents**.
 
-Whether you are building backend report pipelines, ERP/CRM accounting modules, invoice generators, or LLM-driven document agents, generating clean TenTags strings via loops and f-strings is orders of magnitude simpler and safer than emitting verbose HTML strings with inline `style=""` or hundreds of lines of `openpyxl` API calls:
+Whether you are building backend report pipelines, ERP/CRM accounting modules, invoice generators, or LLM-driven document agents, generating clean TenTags strings via loops and f-strings is orders of magnitude simpler and safer than emitting verbose HTML strings with inline `style=""` or hundreds of lines of `openpyxl` / `reportlab` API calls:
 
 ```python
 # Programmatically generate high-fidelity reports with dynamic loops and f-strings:
@@ -29,7 +29,7 @@ formula = f'''
 
 ### ⚙️ Intermediate Representation (IR) Compiler Architecture
 
-At its core, **TenTags** decouples markup tokenization from rendering by compiling formulas into a unified `TableModel` (AST/IR). Because `TableModel` serves as a clean **Intermediate Representation**, you can compile exact multi-cell grid merges (`<cm>`, `<rm>`), typography (`<fs>`, `<b>`, `<i>`), alignments, and pattern fills (`<bg>`, `<color>`) across multiple backends:
+At its core, **TenTags** decouples markup tokenization from rendering by compiling formulas into a unified `TableModel` (AST/IR). Because `TableModel` serves as a clean **Intermediate Representation**, you can compile exact multi-cell grid merges (`<cm>`, `<rm>`), typography (`<fs>`, `<b>`, `<i>`), alignments, and pattern fills (`<bg>`, `<color>`) across all three major corporate backends:
 
 ```text
 Text Formula
@@ -41,16 +41,16 @@ Text Formula
   Parser
      ↓
  TableModel (Intermediate Representation / IR)
-   ↙    ↘
-HTML    Excel (.xlsx)   [Future: PDF, DOCX, Canvas, Flutter...]
+   ↙    ↓    ↘
+HTML  Excel  PDF (.pdf)   [Future: DOCX, Canvas, Flutter...]
 ```
 
 - 🎯 **Target Audience**: Backend developers (FastAPI, Django, Flask), ERP/CRM financial engines, automated invoice/receipt generators, and AI/LLM agents.
-- 🤖 **AI & LLM Native**: LLMs generate exact, compact TenTags formulas reliably without CSS layout bugs or Excel API hallucinations.
+- 🤖 **AI & LLM Native**: LLMs generate exact, compact TenTags formulas reliably without CSS layout bugs or Excel/PDF API hallucinations.
 - 🔀 **Declarative Grid Merges**: Effortlessly merge cells rightward across columns (`<cm>`) and downward across rows (`<rm>`).
 - 🎨 **Rich Typography & Styling**: Inline control over font size (`<fs>`), bold (`<b>`), italic (`<i>`), alignment (`<left>`, `<center>`, `<right>`), text color (`<color=>`), and cell fills (`<bg=>`).
-- 📊 **Dual Backend Rendering**: Directly compile your IR to high-fidelity **HTML** (`render_html`) or native **Excel (`.xlsx`)** (`render_xlsx`) with true merged cells (`ws.merge_cells`).
-- ⚡ **Zero Core Dependencies**: Pure Python runtime (`xml.etree.ElementTree`) for DSL tokenization and HTML rendering. Optional Excel export via `openpyxl`.
+- 📊 **Triple Backend Rendering**: Directly compile your IR to high-fidelity **HTML** (`render_html`), native **Excel (`.xlsx`)** (`render_xlsx`), or vector **PDF (`.pdf`)** (`render_pdf`).
+- ⚡ **Lightweight & Modular Runtime**: Pure Python runtime (`xml.etree.ElementTree`) for DSL tokenization and HTML rendering. Optional Excel export (`openpyxl`) and PDF export (`reportlab`).
 
 ---
 
@@ -70,9 +70,14 @@ formula = '''3,2,1,"#cbd5e1","solid",0,40, data(
 # 1. Render directly to high-fidelity HTML string
 html_table = tentags.render(formula)
 
-# 2. Or export directly to native Excel (.xlsx)
+# 2. Compile IR for Excel (.xlsx) and PDF (.pdf) export
 model = tentags.parse(formula)
+
+# Export to native Excel (.xlsx)
 tentags.render_xlsx(model, "Quarter_Report.xlsx")
+
+# Export to vector PDF (.pdf)
+tentags.render_pdf(model, "Quarter_Report.pdf")
 ```
 
 **↓ Faithful Visual Output across both HTML & Excel (`.xlsx`):**

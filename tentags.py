@@ -2,6 +2,7 @@ import re
 import csv
 import urllib.request
 import io
+from typing import Union, Any, Optional, Dict, List
 from enum import Enum, auto
 from dataclasses import dataclass
 
@@ -762,6 +763,166 @@ def render_xlsx(model: TableModel, filepath_or_stream):
                 )
                 
     wb.save(filepath_or_stream)
+
+def render_pdf(model: TableModel, filepath_or_stream: Union[str, Any]) -> None:
+    """
+    Renders a TableModel directly to a PDF document using ReportLab.
+    Translates IR coordinates, merged regions, background fills, fonts, and borders into native ReportLab TableStyles.
+    """
+    try:
+        from reportlab.lib.pagesizes import letter, landscape
+        from reportlab.lib import colors
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
+        from reportlab.lib.styles import ParagraphStyle
+    except ImportError:
+        raise ImportError(
+            "The 'reportlab' package is required for PDF rendering. "
+            "Install it via 'pip install tentags[pdf]' or 'pip install reportlab'."
+        )
+
+    # Convert border/background color to reportlab color
+    def hex_to_rl_color(hex_str: str, default=colors.black):
+        if not hex_str:
+            return default
+        hex_str = hex_str.strip().lstrip('#')
+        if len(hex_str) == 3:
+            hex_str = ''.join([c*2 for c in hex_str])
+        try:
+            return colors.HexColor('#' + hex_str)
+        except Exception:
+            return default
+
+    data_matrix = []
+    table_styles = []
+
+    # Configure grid borders
+    border_w = max(0.5, float(model.border_width))
+    border_c = hex_to_rl_color(model.border_color)
+    table_styles.append(('GRID', (0, 0), (-1, -1), border_w, border_c))
+    table_styles.append(('VALIGN', (0, 0), (-1, -1), 'MIDDLE'))
+
+    # Calculate connected components of merged cells for SPAN commands
+    visited = set()
+    for r in range(model.rows):
+        for c in range(model.cols):
+            if (r, c) in visited:
+                continue
+            component = []
+            queue = [(r, c)]
+            visited.add((r, c))
+            while queue:
+                curr_r, curr_c = queue.pop(0)
+                component.append((curr_r, curr_c))
+                # right
+                if curr_c < model.cols - 1 and curr_r < len(model.cells) and curr_c < len(model.cells[curr_r]):
+                    if model.cells[curr_r][curr_c].border_flags & BorderFlags.HIDE_RIGHT:
+                        if (curr_r, curr_c + 1) not in visited:
+                            visited.add((curr_r, curr_c + 1))
+                            queue.append((curr_r, curr_c + 1))
+                # left
+                if curr_c > 0 and curr_r < len(model.cells) and curr_c < len(model.cells[curr_r]):
+                    if model.cells[curr_r][curr_c].border_flags & BorderFlags.HIDE_LEFT:
+                        if (curr_r, curr_c - 1) not in visited:
+                            visited.add((curr_r, curr_c - 1))
+                            queue.append((curr_r, curr_c - 1))
+                # bottom
+                if curr_r < model.rows - 1 and curr_r < len(model.cells) and curr_c < len(model.cells[curr_r]):
+                    if model.cells[curr_r][curr_c].border_flags & BorderFlags.HIDE_BOTTOM:
+                        if (curr_r + 1, curr_c) not in visited:
+                            visited.add((curr_r + 1, curr_c))
+                            queue.append((curr_r + 1, curr_c))
+                # top
+                if curr_r > 0 and curr_r < len(model.cells) and curr_c < len(model.cells[curr_r]):
+                    if model.cells[curr_r][curr_c].border_flags & BorderFlags.HIDE_TOP:
+                        if (curr_r - 1, curr_c) not in visited:
+                            visited.add((curr_r - 1, curr_c))
+                            queue.append((curr_r - 1, curr_c))
+            if len(component) > 1:
+                min_r = min(x[0] for x in component)
+                max_r = max(x[0] for x in component)
+                min_c = min(x[1] for x in component)
+                max_c = max(x[1] for x in component)
+                table_styles.append(('SPAN', (min_c, min_r), (max_c, max_r)))
+
+    for r in range(model.rows):
+        row_data = []
+        for c in range(model.cols):
+            val = ""
+            cell_styles = {}
+            if r < len(model.cells) and c < len(model.cells[r]):
+                val = model.cells[r][c].raw_expr
+                if val == 'None':
+                    val = ''
+                cell_styles = model.cells[r][c].styles
+
+            # Background fill
+            if 'background-color' in cell_styles:
+                bg_c = hex_to_rl_color(cell_styles['background-color'])
+                table_styles.append(('BACKGROUND', (c, r), (c, r), bg_c))
+
+            # Alignment
+            h_align = cell_styles.get('text-align', 'center').upper()
+            if h_align in ('LEFT', 'CENTER', 'RIGHT'):
+                table_styles.append(('ALIGN', (c, r), (c, r), h_align))
+
+            # Typography formatting
+            is_bold = cell_styles.get('font-weight') == 'bold'
+            is_italic = cell_styles.get('font-style') == 'italic'
+            font_color = hex_to_rl_color(cell_styles.get('color', ''), default=colors.black)
+            
+            font_size = 11
+            if 'font-size' in cell_styles:
+                num_match = re.search(r'\d+', cell_styles['font-size'])
+                if num_match:
+                    font_size = int(num_match.group(0))
+
+            font_name = 'Helvetica'
+            if is_bold and is_italic:
+                font_name = 'Helvetica-BoldOblique'
+            elif is_bold:
+                font_name = 'Helvetica-Bold'
+            elif is_italic:
+                font_name = 'Helvetica-Oblique'
+
+            table_styles.append(('FONTNAME', (c, r), (c, r), font_name))
+            table_styles.append(('FONTSIZE', (c, r), (c, r), font_size))
+            table_styles.append(('TEXTCOLOR', (c, r), (c, r), font_color))
+
+            if val != '':
+                rl_align = 1 # center
+                if h_align == 'LEFT':
+                    rl_align = 0
+                elif h_align == 'RIGHT':
+                    rl_align = 2
+                
+                p_style = ParagraphStyle(
+                    f'Cell_{r}_{c}',
+                    fontName=font_name,
+                    fontSize=font_size,
+                    leading=font_size + 3,
+                    textColor=font_color,
+                    alignment=rl_align
+                )
+                row_data.append(Paragraph(str(val), p_style))
+            else:
+                row_data.append("")
+        data_matrix.append(row_data)
+
+    doc = SimpleDocTemplate(
+        filepath_or_stream,
+        pagesize=landscape(letter) if model.cols > 4 else letter,
+        rightMargin=36,
+        leftMargin=36,
+        topMargin=36,
+        bottomMargin=36
+    )
+
+    table = Table(data_matrix, style=TableStyle(table_styles))
+    if model.stretch == 0 and model.cell_height > 0:
+        row_heights = [max(25, model.cell_height)] * model.rows
+        table._argH = row_heights
+
+    doc.build([table])
 
 def render(formula_args: str, context: dict = None) -> str:
     """

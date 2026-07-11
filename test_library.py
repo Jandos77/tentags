@@ -78,6 +78,11 @@ def test():
     model_dashboard = tentags.parse(expr_dashboard)
     tentags.render_xlsx(model_dashboard, "Q3_Financial_Dashboard.xlsx")
     print("Excel dashboard table saved as: Q3_Financial_Dashboard.xlsx")
+    try:
+        tentags.render_pdf(model_dashboard, "Q3_Financial_Dashboard.pdf")
+        print("PDF dashboard table saved as: Q3_Financial_Dashboard.pdf")
+    except ImportError as e:
+        print(f"Skipping PDF dashboard export: {e}")
 
     # 6.4 Пример матрицы с вертикальными (<rm>) и горизонтальными (<cm>) слияниями и цветами Excel
     print("\n--- Test 6.4 (Excel Matrix Example: Multi-row/col merges & fills): ---")
@@ -94,6 +99,11 @@ def test():
     model_matrix = tentags.parse(expr_matrix)
     tentags.render_xlsx(model_matrix, "Enterprise_Budget_Matrix.xlsx")
     print("Excel matrix table saved as: Enterprise_Budget_Matrix.xlsx")
+    try:
+        tentags.render_pdf(model_matrix, "Enterprise_Budget_Matrix.pdf")
+        print("PDF matrix table saved as: Enterprise_Budget_Matrix.pdf")
+    except ImportError as e:
+        print(f"Skipping PDF matrix export: {e}")
 
     # 7. Генерация сводного HTML-файла с результатами
     print("\n--- Test 7 (Generating Summary HTML File): ---")
