@@ -93,6 +93,31 @@ tentags.render_pdf(model, "Quarter_Report.pdf")
 
 ---
 
+## ⚙️ Formula Structure & The Preamble
+
+A TenTags formula consists of two parts: the **Preamble** (which defines global table structure, grid borders, and sizing) and the **Data Block** (which contains the cell contents and styles).
+
+Example formula layout:
+```text
+ 1   2   3      4         5     6   7
+ ──  ──  ──  ───────   ───────  ─  ──
+ 4 , 4 , 1 ,"#cbd5e1","solid", 0, 45, data(...)
+```
+
+| Position | Parameter | Type | Description |
+| :---: | :--- | :--- | :--- |
+| **1** | `rows` | `int` | The total number of rows in the table grid. |
+| **2** | `cols` | `int` | The total number of columns in the table grid. |
+| **3** | `border_width` | `int` / `float` | The width of the grid lines in pixels. |
+| **4** | `border_color` | `str` | HEX color string (e.g., `"#cbd5e1"`) for the grid lines. |
+| **5** | `border_style` | `str` | Style of the grid lines (`"solid"`, `"dashed"`, or `"dotted"`). |
+| **6** | `stretch` | `int` | Auto-stretching behavior. `0` maintains fixed cell heights, `1` stretches the grid. |
+| **7** | `cell_height` | `int` | Default height of each row in pixels. |
+
+Following these 7 preamble parameters, the formula is completed by the `data(...)` block where the actual table cells are defined row-by-row, separated by semicolons (`;`) and columns separated by commas (`,`).
+
+---
+
 ## 🏷️ The 10 Tags in `data(...)`
 
 TenTags derives its name from the **10 core structural and styling tags** supported inside the `data(...)` argument block:
