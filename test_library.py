@@ -219,5 +219,19 @@ def test():
         f.write(html_template)
     print(f"Summary HTML report generated successfully and saved as: {html_filename}")
 
+    # 8. Тест генерации PDF (.pdf) через render_pdf
+    print("\n--- Test 8 (PDF Renderer API via ReportLab): ---")
+    expr_pdf = '''3,4,1,"#cbd5e1","solid",0,40, data(
+        <fs=16><bg=#1e293b><color=white><b><cm>Q3 Financial Report, , , </cm></b></color></bg></fs>;
+        <bg=#f1f5f9><b><left>Department</left></b></bg>, <bg=#f1f5f9><b><center>Revenue</center></b></bg>, <bg=#f1f5f9><b><center>Expenses</center></b></bg>, <bg=#f1f5f9><b><center>Net Profit</center></b></bg>;
+        <left>Engineering</left>, <right>"$240,000"</right>, <right>"$180,000"</right>, <bg=#dcfce7><color=#166534><b><right>"+$60,000"</right></b></color></bg>
+    )'''
+    try:
+        model_pdf = tentags.parse(expr_pdf)
+        tentags.render_pdf(model_pdf, "test_output.pdf")
+        print("PDF table generated successfully and saved as: test_output.pdf")
+    except ImportError as e:
+        print(f"Skipping PDF export (reportlab not installed): {e}")
+
 if __name__ == '__main__':
     test()

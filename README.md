@@ -80,7 +80,7 @@ tentags.render_xlsx(model, "Quarter_Report.xlsx")
 tentags.render_pdf(model, "Quarter_Report.pdf")
 ```
 
-**↓ Faithful Visual Output across both HTML & Excel (`.xlsx`):**
+**↓ Faithful Visual Output across HTML, Excel (`.xlsx`) and PDF (`.pdf`):**
 
 <p align="center">
   <img src="https://pycells.com/assets/img/Quarter_Report.png" alt="TenTags Quarter Report Output" width="600">
@@ -122,11 +122,24 @@ Install from PyPI via pip:
 pip install tentags
 ```
 
-If you plan to export directly to Excel (`.xlsx`), install the optional `excel` dependency:
+For **Excel (`.xlsx`)** export, install the optional `excel` dependency:
 
 ```bash
 pip install tentags[excel]
 # or directly: pip install openpyxl
+```
+
+For **PDF (`.pdf`)** export, install the optional `pdf` dependency:
+
+```bash
+pip install tentags[pdf]
+# or directly: pip install reportlab
+```
+
+To install **all optional backends** at once:
+
+```bash
+pip install tentags[all]
 ```
 
 ---
@@ -146,11 +159,16 @@ formula = '''4,4,1,"#cbd5e1","solid",0,45, data(
     <left>Sales & Marketing</left>, <right>"$310,000"</right>, <right>"$210,000"</right>, <bg=#dcfce7><color=#166534><b><right>"+$100,000"</right></b></color></bg>
 )'''
 
-# 1. Export directly to native Excel spreadsheet with exact fonts, fills, & merge_cells
+# Compile IR once — render to any backend
 model = tentags.parse(formula)
+
+# 1. Export to native Excel (.xlsx) with exact fonts, fills & merge_cells
 tentags.render_xlsx(model, "Q3_Financial_Dashboard.xlsx")
 
-# 2. Render to responsive HTML string with inline CSS
+# 2. Export to vector PDF (.pdf) via ReportLab
+tentags.render_pdf(model, "Q3_Financial_Dashboard.pdf")
+
+# 3. Render to responsive HTML string with inline CSS
 html_table = tentags.render_html(model)
 print(html_table)
 ```
@@ -179,9 +197,14 @@ excel_formula = '''5,5,1,"#B0C4DE","solid",0,35, data(
     <bg=#E2EFDA><color=#375623><b><left>Total Budget</left></b></color></bg>, <bg=#E2EFDA><color=#375623><b><cm><right>"$235,000", </right></cm></b></color></bg>, <bg=#E2EFDA><color=#375623><b><cm><right>"+$215,000", </right></cm></b></color></bg>
 )'''
 
-# Export to a native Excel spreadsheet (.xlsx) with true merged regions & fills
+# Compile IR once — export to all three backends
 model = tentags.parse(excel_formula)
+
+# Export to native Excel (.xlsx)
 tentags.render_xlsx(model, "Enterprise_Budget_Matrix.xlsx")
+
+# Export to vector PDF (.pdf)
+tentags.render_pdf(model, "Enterprise_Budget_Matrix.pdf")
 ```
 
 ### 🗓️ Visual Spreadsheet Grid Structure (`A1:E5`):
@@ -224,17 +247,29 @@ Parses the formula into a structured `TableModel` instance containing 2D cell gr
 Renders a previously parsed `TableModel` instance into an HTML string.
 
 ### `tentags.render_xlsx(model: TableModel, output_filename: str) -> None`
-Exports a `TableModel` directly to an Excel `.xlsx` file using `openpyxl`. Applies `openpyxl.styles.Font` (bold, italic, color), `openpyxl.styles.PatternFill` (background color), and `openpyxl.styles.Border` according to the table formula.
+Exports a `TableModel` directly to an Excel `.xlsx` file using `openpyxl`. Applies `openpyxl.styles.Font` (bold, italic, color), `openpyxl.styles.PatternFill` (background color), and `openpyxl.styles.Border` according to the table formula. Requires `pip install tentags[excel]`.
+
+### `tentags.render_pdf(model: TableModel, output_filename: str) -> None`
+Exports a `TableModel` directly to a vector **PDF** file using `ReportLab`. Translates IR coordinates, merged cell regions (`SPAN`), background fills (`BACKGROUND`), fonts, alignments, and border grids into native `ReportLab` `TableStyle` commands. Automatically selects portrait or landscape page orientation based on column count. Requires `pip install tentags[pdf]`.
 
 ---
 
 ## 🧪 Running Tests
 
-To run the standalone test suite and generate sample visual outputs (`test_output.html`, `test_output.xlsx`, `test_style_output.xlsx`):
+To run the standalone test suite and generate sample visual outputs:
 
 ```bash
 python test_library.py
 ```
+
+Generated output files include:
+- `test_output.html` — Summary HTML report of all rendered tables
+- `test_output.xlsx` — Basic Excel table
+- `test_style_output.xlsx` — Excel with styling tags
+- `Q3_Financial_Dashboard.xlsx` / `.pdf` — Financial dashboard in Excel and PDF
+- `Enterprise_Budget_Matrix.xlsx` / `.pdf` — Enterprise budget matrix in Excel and PDF
+
+> PDF files require `pip install tentags[pdf]` (ReportLab).
 
 ---
 
