@@ -1,8 +1,8 @@
 # TenTags 🏷️
 
 <p align="center">
-  <a href="https://pycells.com">
-    <img src="https://pycells.com/assets/img/tentags_logo.png" width="400" alt="TenTags logo">
+  <a href="https://tentags.org">
+    <img src="https://tentags.org/assets/img/tentags_logo.png" width="400" alt="TenTags logo">
   </a>
 </p>
 
@@ -83,7 +83,7 @@ tentags.render_pdf(model, "Quarter_Report.pdf")
 **↓ Faithful Visual Output across HTML, Excel (`.xlsx`) and PDF (`.pdf`):**
 
 <p align="center">
-  <img src="https://pycells.com/assets/img/Quarter_Report.png" alt="TenTags Quarter Report Output" width="600">
+  <img src="https://tentags.org/assets/img/Quarter_Report.png" alt="TenTags Quarter Report Output" width="600">
 </p>
 
 | Quarter Report *(Merged across 2 columns (`<cm>`), 16px Bold White text, Dark Slate `#1e293b` fill)* | — |
@@ -201,7 +201,7 @@ print(html_table)
 ### 📋 Visual Structure & Styling Result:
 
 <p align="center">
-  <img src="https://pycells.com/assets/img/Q3_Financial_Dashboard.png" alt="Q3 Financial Performance Dashboard Output" width="750">
+  <img src="https://tentags.org/assets/img/Q3_Financial_Dashboard.png" alt="Q3 Financial Performance Dashboard Output" width="750">
 </p>
 
 ---
@@ -235,7 +235,7 @@ tentags.render_pdf(model, "Enterprise_Budget_Matrix.pdf")
 ### 🗓️ Visual Spreadsheet Grid Structure (`A1:E5`):
 
 <p align="center">
-  <img src="https://pycells.com/assets/img/example.png" alt="TenTags Excel Matrix Output" width="750">
+  <img src="https://tentags.org/assets/img/example.png" alt="TenTags Excel Matrix Output" width="750">
 </p>
 
 

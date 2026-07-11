@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tentags"
-version = "0.1.7"
+version = "0.1.8"
 description = "A declarative template language and Intermediate Representation (IR) for automated HTML, Excel, and PDF table/document generation."
 readme = "README.md"
 authors = [
@@ -53,8 +53,8 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://pycells.com"
-Documentation = "https://pycells.com/tentags"
+Homepage = "https://tentags.org"
+Documentation = "https://tentags.org"
 Repository = "https://github.com/Jandos77/tentags"
 Issues = "https://github.com/Jandos77/tentags/issues"
 
