@@ -27,22 +27,24 @@ formula = f'''
 )'''
 ```
 
-### ⚙️ Intermediate Representation (IR) Compiler Architecture
+### ⚙️ Compiler & Data Pipeline Architecture
 
-At its core, **TenTags** decouples markup tokenization from rendering by compiling formulas into a unified `TableModel` (AST/IR). Because `TableModel` serves as a clean **Intermediate Representation**, you can compile exact multi-cell grid merges (`<cm>`, `<rm>`), typography (`<fs>`, `<b>`, `<i>`), alignments, and pattern fills (`<bg>`, `<color>`) across all three major corporate backends:
+At its core, **TenTags** is a unified **Intermediate Representation (IR)** table compiler. Rather than manually writing long static strings, you generate TenTags formulas dynamically in your Python backend (e.g. from ORM models or database cursors), parse them into a `TableModel` AST, and compile them to any target format:
 
 ```text
-Text Formula
-     ↓
-   Lexer
-     ↓
-  Tokens
-     ↓
-  Parser
-     ↓
- TableModel (Intermediate Representation / IR)
-   ↙    ↓    ↘
-HTML  Excel  PDF (.pdf)   [Future: DOCX, Canvas, Flutter...]
+   Database / API
+         ↓
+    ORM / SQL / Objects
+         ↓
+  f-strings / Templates
+         ↓
+   TenTags Formula
+         ↓
+  [ Lexer ➔ Parser ]
+         ↓
+   TableModel (IR)
+      ↙  ↓  ↘
+   HTML Excel PDF  [Future: DOCX, SVG, Flutter...]
 ```
 
 - 🎯 **Target Audience**: Backend developers (FastAPI, Django, Flask), ERP/CRM financial engines, automated invoice/receipt generators, and AI/LLM agents.
@@ -54,29 +56,47 @@ HTML  Excel  PDF (.pdf)   [Future: DOCX, Canvas, Flutter...]
 
 ---
 
-## ⚡ Quick Code → Result
+## ⚡ Quick Start: Programmatic Template Generation
 
-Write this concise, expressive TenTags formula:
+TenTags shines when generating formatted tabular documents dynamically from Python objects:
 
 ```python
 import tentags
 
-formula = '''3,2,1,"#cbd5e1","solid",0,40, data(
-    <fs=16><bg=#1e293b><color=white><b><cm><center>Quarter Report, ,</center></cm></b></color></bg></fs>;
-    <b>Sales</b>, <right>"$120,000"</right>;
-    <b>Marketing</b>, <right>"$80,000"</right>
-)'''
+# 1. Your raw data source (e.g., query results from database/ORM)
+employees = [
+    {"name": "Alice Vance", "salary": "$120,000", "dept": "Engineering"},
+    {"name": "Bob Miller", "salary": "$95,000", "dept": "Design"},
+    {"name": "Charlie R.", "salary": "$110,000", "dept": "Product"}
+]
 
-# 1. Render directly to high-fidelity HTML string
-html_table = tentags.render(formula)
+# 2. Define styled header
+header = (
+    '<fs=16><bg=#1e293b><color=white><b>Name</b></color></bg></fs>, '
+    '<fs=16><bg=#1e293b><color=white><b>Salary</b></color></bg></fs>, '
+    '<fs=16><bg=#1e293b><color=white><b>Department</b></color></bg></fs>'
+)
 
-# 2. Compile IR for Excel (.xlsx) and PDF (.pdf) export
+# 3. Format body rows dynamically
+body_rows = ";\n".join(
+    f"<b>{e['name']}</b>, <right>{e['salary']}</right>, <bg=#f1f5f9>{e['dept']}</bg>"
+    for e in employees
+)
+
+# 4. Construct complete formula with global Preamble (rows, cols, borders, row_height)
+formula = f'''
+{len(employees) + 1},3,1,"#cbd5e1","solid",0,40, data(
+    {header};
+    {body_rows}
+)
+'''
+
+# 5. Parse formula into Intermediate Representation (IR)
 model = tentags.parse(formula)
 
-# Export to native Excel (.xlsx)
+# 6. Render to multiple backends
+html_table = tentags.render_html(model)
 tentags.render_xlsx(model, "Quarter_Report.xlsx")
-
-# Export to vector PDF (.pdf)
 tentags.render_pdf(model, "Quarter_Report.pdf")
 ```
 
