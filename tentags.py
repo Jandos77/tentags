@@ -1,7 +1,8 @@
 import re
-import csv
+import csv as _csv
 import urllib.request
 import io
+import os
 from typing import Union, Any, Optional, Dict, List
 from enum import Enum, auto
 from dataclasses import dataclass
@@ -257,14 +258,14 @@ def load_csv(source_path: str):
             with urllib.request.urlopen(req) as response:
                 content = response.read().decode('utf-8')
             f = io.StringIO(content)
-            reader = csv.reader(f)
+            reader = _csv.reader(f)
             return list(reader)
         except Exception as e:
             return [[f"Error loading CSV URL: {e}"]]
     else:
         try:
             with open(source_path, mode='r', encoding='utf-8') as f:
-                reader = csv.reader(f)
+                reader = _csv.reader(f)
                 return list(reader)
         except Exception as e:
             return [[f"Error loading CSV file: {e}"]]
@@ -986,12 +987,118 @@ def render_pdf(model: TableModel, filepath_or_stream: Union[str, Any]) -> None:
 
     doc.build([table])
 
-def render(formula_args: str, context: dict = None) -> str:
+def load_style(filepath_or_str: Union[str, list], context: dict = None) -> list[list[CellDesc]]:
+    if not isinstance(filepath_or_str, str):
+        return filepath_or_str
+    
+    content = filepath_or_str
+    if os.path.exists(filepath_or_str):
+        with open(filepath_or_str, 'r', encoding='utf-8') as f:
+            content = f.read()
+    
+    content = content.strip()
+    match = re.match(r'(?is)^style\((.*)\)$', content)
+    if match:
+        content = match.group(1).strip()
+    return parse_data_arg(content, context)
+
+def load_data(filepath_or_str: Union[str, list], context: dict = None) -> list[list[CellDesc]]:
+    if not isinstance(filepath_or_str, str):
+        return filepath_or_str
+    
+    content = filepath_or_str
+    if os.path.exists(filepath_or_str):
+        with open(filepath_or_str, 'r', encoding='utf-8') as f:
+            content = f.read()
+    
+    content = content.strip()
+    match = re.match(r'(?is)^data\((.*)\)$', content)
+    if match:
+        content = match.group(1).strip()
+    return parse_data_arg(content, context)
+
+def csv(filepath_or_url: str) -> list[list[CellDesc]]:
+    raw_data = load_csv(filepath_or_url)
+    grid = []
+    for r in raw_data:
+        row = []
+        for val in r:
+            cell = CellDesc()
+            cell.raw_expr = val.strip()
+            cell.text_parts = [cell.raw_expr]
+            row.append(cell)
+        grid.append(row)
+    return grid
+
+def compile(style: Any, data: Any, preamble: Any = None, context: dict = None) -> TableModel:
+    style_grid = load_style(style, context)
+    data_grid = load_data(data, context)
+    
+    cells_grid = overlay_style_and_data(style_grid, data_grid)
+    
+    rows = len(cells_grid)
+    cols = max(len(row) for row in cells_grid) if cells_grid else 0
+    border_width = 1
+    border_color = "#cbd5e1"
+    border_style = "solid"
+    stretch = 0
+    cell_height = 30
+
+    if preamble:
+        if isinstance(preamble, str):
+            p_args = parse_args_string(preamble)
+            if len(p_args) >= 6:
+                rows = int(p_args[0])
+                cols = int(p_args[1])
+                border_width = int(p_args[2])
+                border_color = p_args[3].strip('"\'')
+                border_style = p_args[4].strip('"\'')
+                stretch = int(p_args[5])
+                if len(p_args) >= 7:
+                    cell_height = int(p_args[6])
+            elif len(p_args) >= 3:
+                border_width = int(p_args[0])
+                border_color = p_args[1].strip('"\'')
+                border_style = p_args[2].strip('"\'')
+                if len(p_args) >= 4:
+                    stretch = int(p_args[3])
+                if len(p_args) >= 5:
+                    cell_height = int(p_args[4])
+        elif isinstance(preamble, dict):
+            border_width = preamble.get('border_width', border_width)
+            border_color = preamble.get('border_color', border_color)
+            border_style = preamble.get('border_style', border_style)
+            stretch = preamble.get('stretch', stretch)
+            cell_height = preamble.get('cell_height', cell_height)
+            rows = preamble.get('rows', rows)
+            cols = preamble.get('cols', cols)
+
+    return TableModel(
+        rows=rows,
+        cols=cols,
+        cells=cells_grid,
+        border_width=border_width,
+        border_color=border_color,
+        border_style=border_style,
+        stretch=stretch,
+        cell_height=cell_height
+    )
+
+def render(style_or_formula: Any, data: Any = None, preamble: Any = None, context: dict = None) -> str:
     """
-    Backward-compatible core function rendering arguments into HTML.
+    Renders a table to HTML. Supports:
+    1. render(formula, context)
+    2. render(style, data, preamble, context)
     """
+    if isinstance(data, dict) and preamble is None and context is None:
+        context = data
+        data = None
+
     try:
-        model = parse(formula_args, context)
+        if data is not None:
+            model = compile(style_or_formula, data, preamble, context)
+        else:
+            model = parse(style_or_formula, context)
         return render_html(model)
     except Exception as e:
         return str(e)

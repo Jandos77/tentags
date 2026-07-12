@@ -130,3 +130,37 @@ def test_decoupled_style_and_data():
     except ImportError:
         pass
 
+def test_load_style_and_data_api():
+    style_content = '''
+    <fs=16><b><center></center></b></fs>, <bg=#eee></bg>;
+    <left></left>, <right></right>
+    '''
+    data_content = '''
+    Title, Metric;
+    Sales, 1000
+    '''
+    
+    style = tentags.load_style(style_content)
+    data = tentags.load_data(data_content)
+    
+    model = tentags.compile(style, data, preamble='1,"#ccc","solid",0,40')
+    
+    assert model.rows == 2
+    assert model.cols == 2
+    assert model.cell_height == 40
+    assert model.border_color == "#ccc"
+    
+    assert model.cells[0][0].raw_expr == "Title"
+    assert model.cells[0][0].styles.get('font-size') == "16px"
+    assert model.cells[0][0].styles.get('font-weight') == "bold"
+    assert model.cells[0][0].styles.get('text-align') == "center"
+    
+    assert model.cells[0][1].raw_expr == "Metric"
+    assert model.cells[0][1].styles.get('background-color') == "#eee"
+    
+    # Test rendering directly
+    html = tentags.render(style, data, preamble='1,"#ccc","solid",0,40')
+    assert "Title" in html
+    assert "background-color:#eee;" in html
+
+
