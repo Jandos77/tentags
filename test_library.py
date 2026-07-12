@@ -1,13 +1,13 @@
 import tentags
 
 def test():
-    # 1. Тест базового вложенного слияния строк и столбцов
+    # 1. Test basic nested row and column merges
     print("--- Test 1 (Basic & Nesting): ---")
     expr = '3,4,1,"#000","solid",1, data(#,<rm>Date</rm>,Name,Job;1,<rm>10.07.2026</rm><cm>,Jone</cm>,None; ,,Piter)'
     html = tentags.render(expr)
     print(html)
     
-    # 2. Тест подстановки переменных
+    # 2. Test variable substitution context
     print("\n--- Test 2 (Variable Context): ---")
     expr_vars = '2,2,1,"#ccc","solid",0,40, data(User, Status; NameVar, StateVar)'
     context = {
@@ -17,25 +17,25 @@ def test():
     html_vars = tentags.render(expr_vars, context)
     print(html_vars)
 
-    # 3. Тест импорта CSV
+    # 3. Test CSV import functionality
     print("\n--- Test 3 (CSV Import): ---")
-    # Убедитесь, что предварительно создали файл test_data.csv
+    # Make sure you have previously created the test_data.csv file
     expr_csv = '3,4,1,"#000","solid",1, data(csv("test_data.csv"))'
     html_csv = tentags.render(expr_csv)
     print(html_csv)
 
-    # 4. Тест нового API разделенного TableModel
+    # 4. Test new decoupled TableModel and HTML renderer API
     print("\n--- Test 4 (Decoupled TableModel & HTML Renderer API): ---")
     expr_decoupled = '2,2,1,"blue","solid",1, data(Hello, World; One, Two)'
-    # 1. Сначала парсим в промежуточную TableModel
+    # 1. Parse first into the intermediate TableModel structure
     table_model = tentags.parse(expr_decoupled)
     print(f"Parsed TableModel metadata: rows={table_model.rows}, cols={table_model.cols}, border={table_model.border_color}")
-    # 2. Передаем модель в рендерер HTML
+    # 2. Send model to the HTML renderer
     html_decoupled = tentags.render_html(table_model)
     print("Rendered HTML:")
     print(html_decoupled)
 
-    # 5. Тест генерации Excel (.xlsx)
+    # 5. Test Excel (.xlsx) file generation
     print("\n--- Test 5 (Excel XLSX Renderer API): ---")
     expr_xlsx = '3,4,1,"#000","solid",1, data(#,<rm>Date</rm>,Name,Job;1,<rm>10.07.2026</rm><cm>,Jone</cm>,None; ,,Piter)'
     model_xlsx = tentags.parse(expr_xlsx)
@@ -43,7 +43,7 @@ def test():
     tentags.render_xlsx(model_xlsx, output_filename)
     print(f"Excel table generated successfully and saved as: {output_filename}")
 
-    # 6. Тест новых тегов стилизации <b>, <i>, <color>, <bg>
+    # 6. Test new styling tags <b>, <i>, <color>, <bg>
     print("\n--- Test 6 (Styling Tags: b, i, color, bg): ---")
     expr_style = '2,2,1,"#000","solid",0,40, data(Regular, <b>Bold Text</b>; <color=red><i>Italic Red</i></color>, <bg=#eeeeee>Gray BG</bg>)'
     html_style = tentags.render(expr_style)
@@ -54,7 +54,7 @@ def test():
     tentags.render_xlsx(model_style, "test_style_output.xlsx")
     print("Excel table with custom fonts and fills saved as: test_style_output.xlsx")
 
-    # 6.2 Проверим теги выравнивания и размера шрифта <fs>, <left>, <center>, <right>
+    # 6.2 Check typography and alignment tags <fs>, <left>, <center>, <right>
     print("\n--- Test 6.2 (Typography & Alignment: fs, left, center, right): ---")
     expr_align = '2,3,1,"#64748b","solid",0,45, data(<fs=18><left>Left 18px</left></fs>, <center>Centered</center>, <right>Right Aligned</right>; <b>A</b>, <i>B</i>, <color=blue>C</color>)'
     html_align = tentags.render(expr_align)
@@ -64,7 +64,7 @@ def test():
     tentags.render_xlsx(model_align, "test_align_output.xlsx")
     print("Excel table with alignment and font size saved as: test_align_output.xlsx")
 
-    # 6.3 Комплексный пример (Financial Dashboard)
+    # 6.3 Advanced showcase (Financial Dashboard)
     print("\n--- Test 6.3 (Advanced Showcase: Q3 Financial Dashboard): ---")
     expr_dashboard = '''4,4,1,"#cbd5e1","solid",0,45, data(
         <fs=18><bg=#1e293b><color=white><b><cm>Q3 Financial Performance Dashboard, , , , </cm></b></color></bg></fs>;
@@ -84,7 +84,7 @@ def test():
     except ImportError as e:
         print(f"Skipping PDF dashboard export: {e}")
 
-    # 6.4 Пример матрицы с вертикальными (<rm>) и горизонтальными (<cm>) слияниями и цветами Excel
+    # 6.4 Excel Matrix Example with vertical (<rm>) and horizontal (<cm>) merges and fills
     print("\n--- Test 6.4 (Excel Matrix Example: Multi-row/col merges & fills): ---")
     expr_matrix = '''5,5,1,"#B0C4DE","solid",0,35, data(
         <fs=16><bg=#1F4E78><color=white><b><cm>2026 Enterprise Budget & Allocation Matrix, , , , </cm></b></color></bg></fs>;
@@ -105,10 +105,10 @@ def test():
     except ImportError as e:
         print(f"Skipping PDF matrix export: {e}")
 
-    # 7. Генерация сводного HTML-файла с результатами
+    # 7. Generate a summary HTML file with outputs
     print("\n--- Test 7 (Generating Summary HTML File): ---")
     html_template = f"""<!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -219,7 +219,7 @@ def test():
         f.write(html_template)
     print(f"Summary HTML report generated successfully and saved as: {html_filename}")
 
-    # 8. Тест генерации PDF (.pdf) через render_pdf
+    # 8. Test PDF generation (.pdf) using render_pdf
     print("\n--- Test 8 (PDF Renderer API via ReportLab): ---")
     expr_pdf = '''3,4,1,"#cbd5e1","solid",0,40, data(
         <fs=16><bg=#1e293b><color=white><b><cm>Q3 Financial Report, , , </cm></b></color></bg></fs>;

@@ -113,16 +113,22 @@ tentags.render_pdf(model, "Quarter_Report.pdf")
 
 ---
 
-## ⚙️ Formula Structure & The Preamble
+## ⚙️ Formula Structure & Decoupled Presentation (TenTags v0.2.0+)
 
-A TenTags formula consists of two parts: the **Preamble** (which defines global table structure, grid borders, and sizing) and the **Data Block** (which contains the cell contents and styles).
+A TenTags formula consists of the **Preamble** (which defines global table structure, grid borders, and sizing) followed by either a single **Data Block** (legacy format), or decoupled **Style** and **Data** blocks (recommended for template reuse):
 
-Example formula layout:
+### 1. Unified Format (Legacy / Simple Tables)
 ```text
  1   2   3      4         5     6   7
  ──  ──  ──  ───────   ───────  ─  ──
  4 , 4 , 1 ,"#cbd5e1","solid", 0, 45, data(...)
 ```
+
+### 2. Decoupled Template Format (v0.2.0+)
+```text
+ 4 , 4 , 1 ,"#cbd5e1","solid", 0, 45, style(...), data(...)
+```
+During compilation, the engine overlays the layout and formatting rules defined in `style(...)` (alignments, fonts, backgrounds, column/row merges) onto the raw content defined in `data(...)`.
 
 | Position | Parameter | Type | Description |
 | :---: | :--- | :--- | :--- |
@@ -134,7 +140,7 @@ Example formula layout:
 | **6** | `stretch` | `int` | Auto-stretching behavior. `0` maintains fixed cell heights, `1` stretches the grid. |
 | **7** | `cell_height` | `int` | Default height of each row in pixels. |
 
-Following these 7 preamble parameters, the formula is completed by the `data(...)` block where the actual table cells are defined row-by-row, separated by semicolons (`;`) and columns separated by commas (`,`).
+Following these preamble parameters, the formula is completed by either the `data(...)` block or a pair of `style(...)` and `data(...)` blocks, where cells are defined row-by-row, separated by semicolons (`;`) and columns separated by commas (`,`).
 
 ---
 

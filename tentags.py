@@ -498,9 +498,49 @@ def parse_args_string(arg_str: str):
 
     return parts
 
+def overlay_style_and_data(style_grid: list[list[CellDesc]], data_grid: list[list[CellDesc]]) -> list[list[CellDesc]]:
+    """
+    Overlays a presentation style grid of cells onto a content data grid of cells.
+    Returns a new merged 2D grid of CellDesc.
+    """
+    cells_grid = []
+    max_r = max(len(style_grid), len(data_grid))
+    for r in range(max_r):
+        row_cells = []
+        style_row_len = len(style_grid[r]) if r < len(style_grid) else 0
+        data_row_len = len(data_grid[r]) if r < len(data_grid) else 0
+        max_c = max(style_row_len, data_row_len)
+        
+        for c in range(max_c):
+            merged_cell = CellDesc()
+            style_cell = style_grid[r][c] if r < len(style_grid) and c < len(style_grid[r]) else None
+            data_cell = data_grid[r][c] if r < len(data_grid) and c < len(data_grid[r]) else None
+
+            if style_cell:
+                merged_cell.cm_block_id = style_cell.cm_block_id
+                merged_cell.rm_block_id = style_cell.rm_block_id
+                merged_cell.border_flags = style_cell.border_flags
+                merged_cell.styles = dict(style_cell.styles)
+
+            if data_cell:
+                merged_cell.raw_expr = data_cell.raw_expr
+                merged_cell.text_parts = list(data_cell.text_parts)
+                if data_cell.cm_block_id is not None:
+                    merged_cell.cm_block_id = data_cell.cm_block_id
+                if data_cell.rm_block_id is not None:
+                    merged_cell.rm_block_id = data_cell.rm_block_id
+                merged_cell.border_flags |= data_cell.border_flags
+                for k, v in data_cell.styles.items():
+                    merged_cell.styles[k] = v
+
+            row_cells.append(merged_cell)
+        cells_grid.append(row_cells)
+    return cells_grid
+
 def parse(formula_args: str, context: dict = None) -> TableModel:
     """
-    Parses formula arguments string and data blocks into a TableModel.
+    Parses formula arguments string, style and data blocks into a TableModel.
+    Supports both legacy format (only data) and new format (style and data).
     """
     args = parse_args_string(formula_args)
     if len(args) < 6:
@@ -514,20 +554,41 @@ def parse(formula_args: str, context: dict = None) -> TableModel:
     stretch = int(args[5])
 
     cell_height = 30
+    style_block_str = None
     data_block_str = None
 
-    if len(args) == 7:
-        val = args[6]
-        if val.lower().startswith('data('):
-            data_block_str = val
+    rem = args[6:]
+    if len(rem) == 1:
+        data_block_str = rem[0]
+    elif len(rem) == 2:
+        if rem[0].lower().startswith('style('):
+            style_block_str = rem[0]
+            data_block_str = rem[1]
         else:
-            cell_height = int(val)
-    elif len(args) >= 8:
-        cell_height = int(args[6])
-        data_block_str = args[7]
+            cell_height = int(rem[0])
+            data_block_str = rem[1]
+    elif len(rem) >= 3:
+        cell_height = int(rem[0])
+        style_block_str = rem[1]
+        data_block_str = rem[2]
 
     cells_grid = []
-    if data_block_str:
+
+    if style_block_str and data_block_str:
+        style_inner = ""
+        match_style = re.match(r'(?is)^style\((.*)\)$', style_block_str)
+        if match_style:
+            style_inner = match_style.group(1).strip()
+        style_grid = parse_data_arg(style_inner, context)
+
+        data_inner = ""
+        match_data = re.match(r'(?is)^data\((.*)\)$', data_block_str)
+        if match_data:
+            data_inner = match_data.group(1).strip()
+        data_grid = parse_data_arg(data_inner, context)
+
+        cells_grid = overlay_style_and_data(style_grid, data_grid)
+    elif data_block_str:
         match = re.match(r'(?is)^data\((.*)\)$', data_block_str)
         if match:
             data_inner = match.group(1).strip()
@@ -917,10 +978,11 @@ def render_pdf(model: TableModel, filepath_or_stream: Union[str, Any]) -> None:
         bottomMargin=36
     )
 
-    table = Table(data_matrix, style=TableStyle(table_styles))
+    row_heights = None
     if model.stretch == 0 and model.cell_height > 0:
         row_heights = [max(25, model.cell_height)] * model.rows
-        table._argH = row_heights
+
+    table = Table(data_matrix, rowHeights=row_heights, style=TableStyle(table_styles))
 
     doc.build([table])
 
