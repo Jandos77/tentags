@@ -105,6 +105,27 @@ def test():
     except ImportError as e:
         print(f"Skipping PDF matrix export: {e}")
 
+    # 6.5 Test border_style suffixes (-1, -0, default)
+    print("\n--- Test 6.5 (Border Suffixes: outer, inner, borderless): ---")
+    # 6.5.1 Default (outer border only)
+    html_outer = tentags.render('2,2,1,"green","solid",1, data(A, B; C, D)')
+    print("Rendered HTML (Default - outer border only):")
+    print(html_outer)
+    # 6.5.2 Inner border suffix -1
+    html_inner = tentags.render('2,2,1,"green","solid-1",1, data(A, B; C, D)')
+    print("Rendered HTML (Inner border suffix -1):")
+    print(html_inner)
+    # 6.5.3 Borderless suffix -0
+    html_borderless = tentags.render('2,2,1,"green","solid-0",1, data(A, B; C, D)')
+    print("Rendered HTML (Borderless suffix -0):")
+    print(html_borderless)
+
+    # 6.6 Test unquoted preambles
+    print("\n--- Test 6.6 (Unquoted colors and border styles): ---")
+    html_unquoted = tentags.render('2,2,1,blue,dashed-1,1, data(A, B; C, D)')
+    print("Rendered HTML (Unquoted colors and border styles):")
+    print(html_unquoted)
+
     # 7. Generate a summary HTML file with outputs
     print("\n--- Test 7 (Generating Summary HTML File): ---")
     html_template = f"""<!DOCTYPE html>

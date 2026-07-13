@@ -135,8 +135,8 @@ During compilation, the engine overlays the layout and formatting rules defined 
 | **1** | `rows` | `int` | The total number of rows in the table grid. |
 | **2** | `cols` | `int` | The total number of columns in the table grid. |
 | **3** | `border_width` | `int` / `float` | The width of the grid lines in pixels. |
-| **4** | `border_color` | `str` | HEX color string (e.g., `"#cbd5e1"`) for the grid lines. |
-| **5** | `border_style` | `str` | Style of the grid lines (`"solid"`, `"dashed"`, or `"dotted"`). |
+| **4** | `border_color` | `str` | HEX color string (e.g. `"#cbd5e1"`, `#1977ff`) or CSS name (e.g. `green`, `blue`). Can be written with or without quotes. |
+| **5** | `border_style` | `str` | Style of the grid lines (`solid`, `dashed`, or `dotted`). Suffix `-1` (e.g. `solid-1`) enables inner grid borders. Suffix `-0` (e.g. `dashed-0`) hides both outer and inner borders (borderless). Default (no suffix) draws only the outer border. Can be written with or without quotes. |
 | **6** | `stretch` | `int` | Auto-stretching behavior. `0` maintains fixed cell heights, `1` stretches the grid. |
 | **7** | `cell_height` | `int` | Default height of each row in pixels. |
 

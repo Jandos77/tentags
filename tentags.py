@@ -610,7 +610,20 @@ def render_html(model: TableModel) -> str:
     """
     Renders a TableModel into an HTML table string.
     """
-    table_style = f"border-collapse:collapse;border:{model.border_width}px {model.border_style} {model.border_color};"
+    border_style = str(model.border_style).strip().lower()
+    apply_to_outer = True
+    apply_to_inner = False
+    if border_style.endswith("-1"):
+        apply_to_inner = True
+        apply_to_outer = True
+        border_style = border_style[:-2]
+    elif border_style.endswith("-0"):
+        apply_to_inner = False
+        apply_to_outer = False
+        border_style = border_style[:-2]
+
+    table_border = f"border:{model.border_width}px {border_style} {model.border_color};" if apply_to_outer else ""
+    table_style = f"border-collapse:collapse;{table_border}"
     if model.stretch == 1:
         table_style += "width:100%;height:100%;table-layout:fixed;"
     else:
@@ -624,6 +637,8 @@ def render_html(model: TableModel) -> str:
             row_height_style = f"height:{100.0 / model.rows}%;"
     else:
         row_height_style = f"height:{model.cell_height}px;"
+
+    td_border = f"border:{model.border_width}px {border_style} {model.border_color};" if apply_to_inner else ""
 
     for r in range(model.rows):
         html.append(f'<tr style="{row_height_style}">')
@@ -651,7 +666,7 @@ def render_html(model: TableModel) -> str:
                     border_overrides.append(f"{prop}:{prop_val};")
 
             overrides_css = "".join(border_overrides)
-            td_style = f"border:{model.border_width}px {model.border_style} {model.border_color};padding:0;{overrides_css}"
+            td_style = f"{td_border}padding:0;{overrides_css}"
             
             if model.stretch == 0:
                 td_style += f"height:{model.cell_height}px;"
@@ -702,17 +717,28 @@ def render_xlsx(model: TableModel, filepath_or_stream):
     ws = wb.create_sheet(title="Table")
     
     # Configure borders mapping
+    border_style = str(model.border_style).strip().lower()
+    apply_to_outer = True
+    apply_to_inner = False
+    if border_style.endswith("-1"):
+        apply_to_inner = True
+        apply_to_outer = True
+        border_style = border_style[:-2]
+    elif border_style.endswith("-0"):
+        apply_to_inner = False
+        apply_to_outer = False
+        border_style = border_style[:-2]
+
     excel_border_style = 'thin'
-    if model.border_style == 'dashed':
+    if border_style == 'dashed':
         excel_border_style = 'dashed'
-    elif model.border_style == 'dotted':
+    elif border_style == 'dotted':
         excel_border_style = 'dotted'
     elif model.border_width > 1:
         excel_border_style = 'medium'
         
     excel_color = normalize_color_to_hex(model.border_color)
     border_side = Side(style=excel_border_style, color=excel_color)
-    cell_border = Border(left=border_side, right=border_side, top=border_side, bottom=border_side)
     
     # Write values, borders, alignments, and heights
     for r in range(model.rows):
@@ -731,7 +757,17 @@ def render_xlsx(model: TableModel, filepath_or_stream):
                 cell_styles = model.cells[r][c].styles
             cell_ref.value = val
             
-            cell_ref.border = cell_border
+            if apply_to_inner:
+                cell_ref.border = Border(left=border_side, right=border_side, top=border_side, bottom=border_side)
+            elif apply_to_outer:
+                left_s = border_side if c == 0 else Side()
+                right_s = border_side if c == model.cols - 1 else Side()
+                top_s = border_side if r == 0 else Side()
+                bottom_s = border_side if r == model.rows - 1 else Side()
+                cell_ref.border = Border(left=left_s, right=right_s, top=top_s, bottom=bottom_s)
+            else:
+                cell_ref.border = Border()
+
             h_align = cell_styles.get('text-align', 'center')
             cell_ref.alignment = Alignment(horizontal=h_align, vertical='center', wrap_text=True)
 
@@ -858,9 +894,25 @@ def render_pdf(model: TableModel, filepath_or_stream: Union[str, Any]) -> None:
     table_styles = []
 
     # Configure grid borders
+    border_style = str(model.border_style).strip().lower()
+    apply_to_outer = True
+    apply_to_inner = False
+    if border_style.endswith("-1"):
+        apply_to_inner = True
+        apply_to_outer = True
+        border_style = border_style[:-2]
+    elif border_style.endswith("-0"):
+        apply_to_inner = False
+        apply_to_outer = False
+        border_style = border_style[:-2]
+
     border_w = max(0.5, float(model.border_width))
     border_c = hex_to_rl_color(model.border_color)
-    table_styles.append(('GRID', (0, 0), (-1, -1), border_w, border_c))
+    if apply_to_inner:
+        table_styles.append(('GRID', (0, 0), (-1, -1), border_w, border_c))
+    elif apply_to_outer:
+        table_styles.append(('BOX', (0, 0), (-1, -1), border_w, border_c))
+        
     table_styles.append(('VALIGN', (0, 0), (-1, -1), 'MIDDLE'))
 
     # Calculate connected components of merged cells for SPAN commands
