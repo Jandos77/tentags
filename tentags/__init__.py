@@ -1183,7 +1183,7 @@ def _csv_load(filepath_or_url: str) -> list[list[CellDesc]]:
         grid.append(row)
     return grid
 
-def compile(style: _Any, data: _Any, preamble: _Any = None, context: dict = None) -> TableModel:
+def compile(preamble: _Any, style: _Any, data: _Any, context: dict = None) -> TableModel:
     """
     Compiles TenTags style and data sources into an intermediate representation (TableModel).
     
@@ -1242,41 +1242,41 @@ def compile(style: _Any, data: _Any, preamble: _Any = None, context: dict = None
         cell_height=cell_height
     )
 
-def render(style_or_formula: _Any, data: _Any = None, preamble: _Any = None, context: dict = None) -> str:
+def render(preamble_or_formula: _Any, style: _Any = None, data: _Any = None, context: dict = None) -> str:
     """
     Renders a TenTags table directly to an HTML string.
 
     Supports two calling styles:
     
     1. Render a self-contained layout formula:
-       >>> import tentags
-       >>> html = tentags.render('3,3,1,"black","solid",0, data(A,B,C; D,E,F; G,H,I)')
+       import tentags
+       html = tentags.render('3,3,1,"black","solid",0, data(A,B,C; D,E,F; G,H,I)')
 
-    2. Render with decoupled style templates, data blocks, and optional preambles:
-       >>> import tentags
-       >>> style = 'style(<bg=white><center><b><cm>Title, , </cm></b></center></bg>; <center>Header 1</center>, <center>Header 2</center>, <center>Header 3</center>; A, B, C)'
-       >>> data = 'data( , , ; , , ; Value A, Value B, Value C)'
-       >>> preamble = '3, 3, 1, "blue", "solid-1"'
-       >>> html = tentags.render(style=style, data=data, preamble=preamble)
+    2. Render with decoupled style templates, data blocks, and preambles:
+       import tentags
+       preamble = '3, 3, 1, "blue", "solid-1"'
+       style = 'style(<bg=white><center><b><cm>Title, , </cm></b></center></bg>; A, B, C)'
+       data = 'data( , , ; Value A, Value B, Value C)'
+       html = tentags.render(preamble, style, data)
 
     Parameters:
-        style_or_formula: Either a self-contained TenTags formula string, or a layout style block.
-        data: Optional content data block (string or list of cells).
-        preamble: Optional layout size & border preamble (string or dict).
+        preamble_or_formula: Either a self-contained TenTags formula string, or a layout preamble.
+        style: Optional style block (string or list of cells).
+        data: Optional data block (string or list of cells).
         context: Optional dictionary of variable substitutions.
 
     Returns:
         A formatted <table>...</table> HTML string.
     """
-    if isinstance(data, dict) and preamble is None and context is None:
-        context = data
-        data = None
+    if isinstance(style, dict) and data is None and context is None:
+        context = style
+        style = None
 
     try:
-        if data is not None:
-            model = compile(style_or_formula, data, preamble, context)
+        if style is not None and data is not None:
+            model = compile(preamble_or_formula, style, data, context)
         else:
-            model = parse(style_or_formula, context)
+            model = parse(preamble_or_formula, context)
         return render_html(model)
     except Exception as e:
         return str(e)

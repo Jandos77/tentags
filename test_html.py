@@ -143,7 +143,7 @@ def test_load_style_and_data_api():
     style = tentags._load_style(style_content)
     data = tentags._load_data(data_content)
     
-    model = tentags.compile(style, data, preamble='1,"#ccc","solid",0,40')
+    model = tentags.compile('1,"#ccc","solid",0,40', style, data)
     
     assert model.rows == 2
     assert model.cols == 2
@@ -159,7 +159,7 @@ def test_load_style_and_data_api():
     assert model.cells[0][1].styles.get('background-color') == "#eee"
     
     # Test rendering directly
-    html = tentags.render(style, data, preamble='1,"#ccc","solid",0,40')
+    html = tentags.render('1,"#ccc","solid",0,40', style, data)
     assert "Title" in html
     assert "background-color:#eee;" in html
 

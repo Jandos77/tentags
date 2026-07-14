@@ -18,12 +18,12 @@ except ImportError:
     JINJA_AVAILABLE = False
 
 
-def jinja_render(style_or_formula, data=None, preamble=None, context=None):
+def jinja_render(preamble_or_formula, style=None, data=None, context=None):
     """
     Jinja-safe wrapper for tentags.render.
     Returns a Markup string so that Jinja2 does not escape the HTML output.
     """
-    res = tentags.render(style_or_formula, data=data, preamble=preamble, context=context)
+    res = tentags.render(preamble_or_formula, style=style, data=data, context=context)
     return Markup(res)
 
 
