@@ -67,12 +67,15 @@ def do_tt(parser, token):
 
 
 @register.simple_tag(name="tentags_inline")
-def tentags_inline(formula):
+def tentags_inline(preamble_or_formula, style=None, data=None):
     """
     Simple tag for inline rendering of a TenTags formula.
     
     Usage:
-        {% load tentags %}
-        {% tentags_inline formula_string %}
+        1. Single formula:
+           {% tentags_inline formula_string %}
+           
+        2. Decoupled mode (Preamble, Style, Data):
+           {% tentags_inline preamble style data %}
     """
-    return mark_safe(tentags.render(formula))
+    return mark_safe(tentags.render(preamble_or_formula, style=style, data=data))
