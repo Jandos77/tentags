@@ -48,7 +48,7 @@ def test_django_block_tag():
 @pytest.mark.skipif(not HAS_DJANGO, reason="Django is not installed")
 def test_django_inline_tag():
     template_str = """
-    {% tentags_inline "1, 1, 1, 'black', 'solid', 0, data(Hello Inline)" %}
+    {% tentags_inline "1, 1, 1, 'black', 'solid', 0, 50, data(Hello Inline)" %}
     """
     
     t = Template(template_str)
