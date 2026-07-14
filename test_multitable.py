@@ -52,7 +52,7 @@ def test_multitable():
     # --- PDF MULTITABLE ---
     print("\n[PDF] Generating multi-page document...")
     try:
-        tentags.multitable_pdf(tables_list, "multitable_report.pdf", page_size="A4", orientation="portrait")
+        tentags.multitable_pdf(tables_list, "multitable_report.pdf", page_size="A4", orientation="portrait", page_break_after_each=False )
         print("PDF document saved as: multitable_report.pdf")
     except ImportError as e:
         print(f"Skipping PDF export: {e}")
