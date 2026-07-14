@@ -10,7 +10,7 @@ readme = "README.md"
 authors = [
     { name = "Zhandos Mambetali", email = "zhandos.mambetali@gmail.com" }
 ]
-license = { text = "Apache-2.0" }
+license = "Apache-2.0"
 license-files = ["LICENSE"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -59,4 +59,4 @@ Repository = "https://github.com/Jandos77/tentags"
 Issues = "https://github.com/Jandos77/tentags/issues"
 
 [tool.setuptools]
-py-modules = ["tentags"]
+packages = ["tentags", "tentags.contrib"]
