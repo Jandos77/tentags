@@ -5,22 +5,40 @@ TenTags
 Declarative Document DSL.
 Generate HTML, PDF, and XLSX documents from a single declarative source.
 
-Website: https://tentags.org
-Documentation: https://tentags.org/docs
-GitHub: https://github.com/Jandos77/tentags
+Quick Start
+-----------
+
+>>> import tentags
+>>> html = tentags.render('3,3,1,"black","solid",0, data(A,B,C; D,E,F; G,H,I)')
+
+Website
+-------
+https://tentags.org
+
+Documentation
+-------------
+https://tentags.org/docs
+
+GitHub
+------
+https://github.com/Jandos77/tentags
 """
 
-__version__ = "1.1.4"
+__version__ = "1.1.5"
 __author__ = "Zhandos Mambetali"
 __license__ = "MIT"
+__copyright__ = "Copyright (c) 2026 Zhandos Mambetali"
 __homepage__ = "https://tentags.org"
-version_info = (1, 1, 4)
+__url__ = "https://tentags.org"
+version_info = (1, 1, 5)
 
 __all__ = [
     "__version__",
     "__author__",
     "__license__",
+    "__copyright__",
     "__homepage__",
+    "__url__",
     "version_info",
     "parse",
     "render",
@@ -1447,21 +1465,19 @@ def info() -> None:
     feats = features()
     
     print(f"TenTags {__version__}\n")
-    print(f"Python      {sys.version.split()[0]}")
-    print(f"License     {__license__}")
-    print(f"Website     {__homepage__}\n")
+    print(f"Author       {__author__}")
+    print(f"License      {__license__}")
+    print(f"Website      {__homepage__}\n")
     
-    print("Renderers")
-    print(f"{'✔' if feats['html'] else '✘'} HTML")
-    print(f"{'✔' if feats['pdf'] else '✘'} PDF")
-    print(f"{'✔' if feats['xlsx'] else '✘'} XLSX\n")
+    print(f"Python       {sys.version.split()[0]}\n")
     
-    print("Core Features")
-    print("✔ DSL Parser")
-    print("✔ Range Expansion (A1:D3)")
-    print("✔ Merged Cells (<cm>, <rm>)")
-    print("✔ Decoupled Styles & Data")
-    print("✔ Multi-Table Reports")
+    print("Features")
+    print("────────")
+    print(f"{'✓' if feats['html'] else '✗'} HTML")
+    print(f"{'✓' if feats['pdf'] else '✗'} PDF")
+    print(f"{'✓' if feats['xlsx'] else '✗'} XLSX")
+    print("✓ Validation")
+    print("✓ Demo")
 
 def validate(formula: str) -> dict:
     """

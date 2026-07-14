@@ -10,8 +10,13 @@ def test_metadata_features():
     print(f"Homepage: {tentags.__homepage__}")
     print(f"Version Info: {tentags.version_info}")
     
-    assert tentags.__version__ == "1.1.4"
-    assert tentags.version_info == (1, 1, 4)
+    print(f"Copyright: {tentags.__copyright__}")
+    print(f"URL: {tentags.__url__}")
+    
+    assert tentags.__version__ == "1.1.5"
+    assert tentags.version_info == (1, 1, 5)
+    assert tentags.__copyright__ == "Copyright (c) 2026 Zhandos Mambetali"
+    assert tentags.__url__ == "https://tentags.org"
     
     # 2. Check info()
     print("\n--- Running tentags.info() ---")
