@@ -1,28 +1,64 @@
-__version__ = "1.1.3"
+"""
+TenTags
+=======
+
+Declarative Document DSL.
+Generate HTML, PDF, and XLSX documents from a single declarative source.
+
+Website: https://tentags.org
+Documentation: https://tentags.org/docs
+GitHub: https://github.com/Jandos77/tentags
+"""
+
+__version__ = "1.1.4"
 __author__ = "Zhandos Mambetali"
 __license__ = "MIT"
 __homepage__ = "https://tentags.org"
-version_info = (1, 1, 3)
+version_info = (1, 1, 4)
 
-import re
+__all__ = [
+    "__version__",
+    "__author__",
+    "__license__",
+    "__homepage__",
+    "version_info",
+    "parse",
+    "render",
+    "render_html",
+    "render_xlsx",
+    "render_pdf",
+    "compile",
+    "multitable_html",
+    "multitable_xlsx",
+    "multitable_pdf",
+    "features",
+    "info",
+    "validate",
+    "demo",
+    "TableModel",
+    "CellDesc",
+    "BorderFlags"
+]
+
+import re as _re
 import csv as _csv
-import urllib.request
-import io
-import os
-from typing import Union, Any, Optional, Dict, List
-from enum import Enum, auto
-from dataclasses import dataclass
+import urllib.request as _urllib_request
+import io as _io
+import os as _os
+from typing import Union as _Union, Any as _Any, Optional as _Optional, Dict as _Dict, List as _List
+from enum import Enum as _Enum, auto as _auto
+from dataclasses import dataclass as _dataclass
 
-class TokenType(Enum):
-    TAG_OPEN = auto()
-    TAG_CLOSE = auto()
-    COMMA = auto()
-    SEMICOLON = auto()
-    TEXT = auto()
+class _TokenType(_Enum):
+    TAG_OPEN = _auto()
+    TAG_CLOSE = _auto()
+    COMMA = _auto()
+    SEMICOLON = _auto()
+    TEXT = _auto()
 
-@dataclass
-class Token:
-    type: TokenType
+@_dataclass
+class _Token:
+    type: _TokenType
     value: str  # tag name or text value
     line: int
     column: int
@@ -55,7 +91,7 @@ class TableModel:
         self.stretch = stretch
         self.cell_height = cell_height
 
-def scan_data_content(content: str):
+def _scan_data_content(content: str):
     """
     Scans the data(...) inner string and extracts tokens.
     Returns a list of Token objects with tracking of source line and column.
@@ -80,7 +116,7 @@ def scan_data_content(content: str):
 
     while i < n:
         # Check for csv(...) calls
-        csv_fn_match = re.match(r'(?i)^csv\(', content[i:])
+        csv_fn_match = _re.match(r'(?i)^csv\(', content[i:])
         if csv_fn_match:
             tok_line, tok_col = line, column
             start_i = i
@@ -102,28 +138,28 @@ def scan_data_content(content: str):
                     if c == q_char:
                         in_q = False
                 advance(1)
-            tokens.append(Token(TokenType.TEXT, content[start_i:i], tok_line, tok_col))
+            tokens.append(_Token(_TokenType.TEXT, content[start_i:i], tok_line, tok_col))
             continue
 
         # Check for generic tags: <tag_name>, <tag_name=attr_value>, or </tag_name>
         if content[i] == '<':
             # Closing tag
-            tag_close_match = re.match(r'^</([a-zA-Z_]+)>', content[i:])
+            tag_close_match = _re.match(r'^</([a-zA-Z_]+)>', content[i:])
             if tag_close_match:
                 tok_line, tok_col = line, column
                 tag_name = tag_close_match.group(1)
                 advance(len(tag_close_match.group(0)))
-                tokens.append(Token(TokenType.TAG_CLOSE, tag_name, tok_line, tok_col))
+                tokens.append(_Token(_TokenType.TAG_CLOSE, tag_name, tok_line, tok_col))
                 continue
                 
             # Opening tag
-            tag_open_match = re.match(r'^<([a-zA-Z_]+)(?:=([^>]+))?>', content[i:])
+            tag_open_match = _re.match(r'^<([a-zA-Z_]+)(?:=([^>]+))?>', content[i:])
             if tag_open_match:
                 tok_line, tok_col = line, column
                 tag_name = tag_open_match.group(1)
                 tag_attr = tag_open_match.group(2)
                 advance(len(tag_open_match.group(0)))
-                tokens.append(Token(TokenType.TAG_OPEN, tag_name, tok_line, tok_col, tag_attr))
+                tokens.append(_Token(_TokenType.TAG_OPEN, tag_name, tok_line, tok_col, tag_attr))
                 continue
 
         # Check for string literals (double quotes)
@@ -136,7 +172,7 @@ def scan_data_content(content: str):
                 advance(1)
             if i < n:
                 advance(1)  # skip close quote
-            tokens.append(Token(TokenType.TEXT, "".join(val_chars), tok_line, tok_col))
+            tokens.append(_Token(_TokenType.TEXT, "".join(val_chars), tok_line, tok_col))
             continue
 
         # Check for string literals (single quotes)
@@ -149,18 +185,18 @@ def scan_data_content(content: str):
                 advance(1)
             if i < n:
                 advance(1)
-            tokens.append(Token(TokenType.TEXT, "".join(val_chars), tok_line, tok_col))
+            tokens.append(_Token(_TokenType.TEXT, "".join(val_chars), tok_line, tok_col))
             continue
 
         # Semicolon
         if content[i] == ';':
-            tokens.append(Token(TokenType.SEMICOLON, ';', line, column))
+            tokens.append(_Token(_TokenType.SEMICOLON, ';', line, column))
             advance(1)
             continue
 
         # Comma
         if content[i] == ',':
-            tokens.append(Token(TokenType.COMMA, ',', line, column))
+            tokens.append(_Token(_TokenType.COMMA, ',', line, column))
             advance(1)
             continue
 
@@ -170,23 +206,23 @@ def scan_data_content(content: str):
         while i < n and content[i] not in (',', ';', '<', '"', "'"):
             val_chars.append(content[i])
             advance(1)
-        tokens.append(Token(TokenType.TEXT, "".join(val_chars), tok_line, tok_col))
+        tokens.append(_Token(_TokenType.TEXT, "".join(val_chars), tok_line, tok_col))
 
     # Clean and filter empty text tokens
     cleaned_tokens = []
     for tok in tokens:
-        if tok.type == TokenType.TEXT:
+        if tok.type == _TokenType.TEXT:
             cleaned_val = tok.value.strip()
             if not cleaned_val and tok.value == "":
-                cleaned_tokens.append(Token(TokenType.TEXT, "", tok.line, tok.column))
+                cleaned_tokens.append(_Token(_TokenType.TEXT, "", tok.line, tok.column))
             elif cleaned_val:
-                cleaned_tokens.append(Token(TokenType.TEXT, cleaned_val, tok.line, tok.column))
+                cleaned_tokens.append(_Token(_TokenType.TEXT, cleaned_val, tok.line, tok.column))
         else:
             cleaned_tokens.append(tok)
             
     return cleaned_tokens
 
-def scan_csv_cell_content(cell_val: str):
+def _scan_csv_cell_content(cell_val: str):
     """
     Scans a single CSV cell value, extracting tags (<tag>, <tag=val>, </tag>)
     and treating the rest of the text as a single text token.
@@ -213,31 +249,31 @@ def scan_csv_cell_content(cell_val: str):
 
     def flush_text():
         if current_text:
-            tokens.append(Token(TokenType.TEXT, "".join(current_text), tok_line, tok_col))
+            tokens.append(_Token(_TokenType.TEXT, "".join(current_text), tok_line, tok_col))
             current_text.clear()
 
     while i < n:
         if cell_val[i] == '<':
             # Closing tag
-            tag_close_match = re.match(r'^</([a-zA-Z_]+)>', cell_val[i:])
+            tag_close_match = _re.match(r'^</([a-zA-Z_]+)>', cell_val[i:])
             if tag_close_match:
                 flush_text()
                 tag_line, tag_col = line, column
                 tag_name = tag_close_match.group(1)
                 advance(len(tag_close_match.group(0)))
-                tokens.append(Token(TokenType.TAG_CLOSE, tag_name, tag_line, tag_col))
+                tokens.append(_Token(_TokenType.TAG_CLOSE, tag_name, tag_line, tag_col))
                 tok_line, tok_col = line, column
                 continue
                 
             # Opening tag
-            tag_open_match = re.match(r'^<([a-zA-Z_]+)(?:=([^>]+))?>', cell_val[i:])
+            tag_open_match = _re.match(r'^<([a-zA-Z_]+)(?:=([^>]+))?>', cell_val[i:])
             if tag_open_match:
                 flush_text()
                 tag_line, tag_col = line, column
                 tag_name = tag_open_match.group(1)
                 tag_attr = tag_open_match.group(2)
                 advance(len(tag_open_match.group(0)))
-                tokens.append(Token(TokenType.TAG_OPEN, tag_name, tag_line, tag_col, tag_attr))
+                tokens.append(_Token(_TokenType.TAG_OPEN, tag_name, tag_line, tag_col, tag_attr))
                 tok_line, tok_col = line, column
                 continue
         
@@ -249,7 +285,7 @@ def scan_csv_cell_content(cell_val: str):
     flush_text()
     return tokens
 
-def load_csv(source_path: str):
+def _load_csv(source_path: str):
     """
     Loads CSV data from a URL or local file path.
     Returns a list of lists of strings.
@@ -257,13 +293,13 @@ def load_csv(source_path: str):
     source_path = source_path.strip().strip('"\'')
     if source_path.startswith(('http://', 'https://')):
         try:
-            req = urllib.request.Request(
+            req = _urllib_request.Request(
                 source_path, 
                 headers={'User-Agent': 'Mozilla/5.0 (tentags)'}
             )
-            with urllib.request.urlopen(req) as response:
+            with _urllib_request.urlopen(req) as response:
                 content = response.read().decode('utf-8')
-            f = io.StringIO(content)
+            f = _io.StringIO(content)
             reader = _csv.reader(f)
             return list(reader)
         except Exception as e:
@@ -276,7 +312,7 @@ def load_csv(source_path: str):
         except Exception as e:
             return [[f"Error loading CSV file: {e}"]]
 
-def parse_data_arg(content: str, context: dict = None):
+def _parse_data_arg(content: str, context: dict = None):
     """
     Parses data block content into a 2D grid of CellDesc.
     Supports variable interpolation using context dictionary.
@@ -286,25 +322,25 @@ def parse_data_arg(content: str, context: dict = None):
     if context is None:
         context = {}
         
-    tokens = scan_data_content(content)
+    tokens = _scan_data_content(content)
     
     # Expand CSV tokens dynamically
     expanded_tokens = []
     for tok in tokens:
-        if tok.type == TokenType.TEXT:
-            csv_match = re.match(r'(?is)^csv\((.*)\)$', tok.value)
+        if tok.type == _TokenType.TEXT:
+            csv_match = _re.match(r'(?is)^csv\((.*)\)$', tok.value)
             if csv_match:
                 csv_path = csv_match.group(1).strip().strip('"\'')
-                csv_data = load_csv(csv_path)
+                csv_data = _load_csv(csv_path)
                 
                 csv_tokens = []
                 for r_idx, row in enumerate(csv_data):
                     if r_idx > 0:
-                        csv_tokens.append(Token(TokenType.SEMICOLON, ';', tok.line, tok.column))
+                        csv_tokens.append(_Token(_TokenType.SEMICOLON, ';', tok.line, tok.column))
                     for c_idx, cell_val in enumerate(row):
                         if c_idx > 0:
-                            csv_tokens.append(Token(TokenType.COMMA, ',', tok.line, tok.column))
-                        csv_tokens.extend(scan_csv_cell_content(cell_val))
+                            csv_tokens.append(_Token(_TokenType.COMMA, ',', tok.line, tok.column))
+                        csv_tokens.extend(_scan_csv_cell_content(cell_val))
                 expanded_tokens.extend(csv_tokens)
                 continue
         expanded_tokens.append(tok)
@@ -362,7 +398,7 @@ def parse_data_arg(content: str, context: dict = None):
         apply_active_tags(current_cell)
 
     for tok in expanded_tokens:
-        if tok.type == TokenType.TAG_OPEN:
+        if tok.type == _TokenType.TAG_OPEN:
             tag_name = tok.value.lower()
             if tag_name == 'cm' and any(t.value.lower() == 'cm' for t in active_tags):
                 raise ValueError(f"Nested <cm> blocks are not supported at line {tok.line}, column {tok.column}.")
@@ -380,7 +416,7 @@ def parse_data_arg(content: str, context: dict = None):
             active_tags.append(tok)
             apply_active_tags(current_cell)
             
-        elif tok.type == TokenType.TAG_CLOSE:
+        elif tok.type == _TokenType.TAG_CLOSE:
             tag_name = tok.value.lower()
             # Find matching tag in stack
             match_idx = -1
@@ -394,12 +430,12 @@ def parse_data_arg(content: str, context: dict = None):
             # Re-apply remaining active styles
             apply_active_tags(current_cell)
             
-        elif tok.type == TokenType.COMMA:
+        elif tok.type == _TokenType.COMMA:
             commit_cell()
-        elif tok.type == TokenType.SEMICOLON:
+        elif tok.type == _TokenType.SEMICOLON:
             commit_cell()
             cells_grid.append([])
-        elif tok.type == TokenType.TEXT:
+        elif tok.type == _TokenType.TEXT:
             apply_active_tags(current_cell)
             current_cell.text_parts.append(tok.value)
 
@@ -464,7 +500,7 @@ def parse_data_arg(content: str, context: dict = None):
 
     return cells_grid
 
-def parse_args_string(arg_str: str):
+def _parse_args_string(arg_str: str):
     """
     Parses the full arguments string into parameters and the raw data block.
     """
@@ -505,7 +541,7 @@ def parse_args_string(arg_str: str):
 
     return parts
 
-def overlay_style_and_data(style_grid: list[list[CellDesc]], data_grid: list[list[CellDesc]]) -> list[list[CellDesc]]:
+def _overlay_style_and_data(style_grid: list[list[CellDesc]], data_grid: list[list[CellDesc]]) -> list[list[CellDesc]]:
     """
     Overlays a presentation style grid of cells onto a content data grid of cells.
     Returns a new merged 2D grid of CellDesc.
@@ -549,7 +585,7 @@ def parse(formula_args: str, context: dict = None) -> TableModel:
     Parses formula arguments string, style and data blocks into a TableModel.
     Supports both legacy format (only data) and new format (style and data).
     """
-    args = parse_args_string(formula_args)
+    args = _parse_args_string(formula_args)
     if len(args) < 6:
         raise ValueError("TABLE requires at least 6 arguments (rows, cols, border_width, border_color, border_style, stretch)")
 
@@ -583,23 +619,23 @@ def parse(formula_args: str, context: dict = None) -> TableModel:
 
     if style_block_str and data_block_str:
         style_inner = ""
-        match_style = re.match(r'(?is)^style\((.*)\)$', style_block_str)
+        match_style = _re.match(r'(?is)^style\((.*)\)$', style_block_str)
         if match_style:
             style_inner = match_style.group(1).strip()
-        style_grid = parse_data_arg(style_inner, context)
+        style_grid = _parse_data_arg(style_inner, context)
 
         data_inner = ""
-        match_data = re.match(r'(?is)^data\((.*)\)$', data_block_str)
+        match_data = _re.match(r'(?is)^data\((.*)\)$', data_block_str)
         if match_data:
             data_inner = match_data.group(1).strip()
-        data_grid = parse_data_arg(data_inner, context)
+        data_grid = _parse_data_arg(data_inner, context)
 
-        cells_grid = overlay_style_and_data(style_grid, data_grid)
+        cells_grid = _overlay_style_and_data(style_grid, data_grid)
     elif data_block_str:
-        match = re.match(r'(?is)^data\((.*)\)$', data_block_str)
+        match = _re.match(r'(?is)^data\((.*)\)$', data_block_str)
         if match:
             data_inner = match.group(1).strip()
-            cells_grid = parse_data_arg(data_inner, context)
+            cells_grid = _parse_data_arg(data_inner, context)
 
     return TableModel(
         rows=rows,
@@ -683,7 +719,7 @@ def render_html(model: TableModel) -> str:
     html.append('</table>')
     return "".join(html)
 
-def normalize_color_to_hex(color_str: str) -> str:
+def _normalize_color_to_hex(color_str: str) -> str:
     color_str = color_str.strip().strip('"\'').lower()
     
     color_map = {
@@ -730,7 +766,7 @@ def _write_model_to_sheet(model: TableModel, ws, start_row: int = 1):
     elif model.border_width > 1:
         excel_border_style = 'medium'
         
-    excel_color = normalize_color_to_hex(model.border_color)
+    excel_color = _normalize_color_to_hex(model.border_color)
     border_side = Side(style=excel_border_style, color=excel_color)
     
     # Write values, borders, alignments, and heights
@@ -769,10 +805,10 @@ def _write_model_to_sheet(model: TableModel, ws, start_row: int = 1):
             is_italic = cell_styles.get('font-style') == 'italic'
             font_color = None
             if 'color' in cell_styles:
-                font_color = normalize_color_to_hex(cell_styles['color'])
+                font_color = _normalize_color_to_hex(cell_styles['color'])
             font_size = None
             if 'font-size' in cell_styles:
-                num_match = re.search(r'\d+', cell_styles['font-size'])
+                num_match = _re.search(r'\d+', cell_styles['font-size'])
                 if num_match:
                     font_size = int(num_match.group(0))
                 
@@ -786,7 +822,7 @@ def _write_model_to_sheet(model: TableModel, ws, start_row: int = 1):
                 
             # Apply background color
             if 'background-color' in cell_styles:
-                bg_color = normalize_color_to_hex(cell_styles['background-color'])
+                bg_color = _normalize_color_to_hex(cell_styles['background-color'])
                 cell_ref.fill = PatternFill(
                     start_color=bg_color, 
                     end_color=bg_color, 
@@ -983,7 +1019,7 @@ def _create_pdf_table_object(model: TableModel):
             
             font_size = 11
             if 'font-size' in cell_styles:
-                num_match = re.search(r'\d+', cell_styles['font-size'])
+                num_match = _re.search(r'\d+', cell_styles['font-size'])
                 if num_match:
                     font_size = int(num_match.group(0))
 
@@ -1051,38 +1087,38 @@ def render_pdf(model: TableModel, filepath_or_stream: Union[str, Any]) -> None:
     table = _create_pdf_table_object(model)
     doc.build([table])
 
-def load_style(filepath_or_str: Union[str, list], context: dict = None) -> list[list[CellDesc]]:
+def _load_style(filepath_or_str: _Union[str, list], context: dict = None) -> list[list[CellDesc]]:
     if not isinstance(filepath_or_str, str):
         return filepath_or_str
     
     content = filepath_or_str
-    if os.path.exists(filepath_or_str):
+    if _os.path.exists(filepath_or_str):
         with open(filepath_or_str, 'r', encoding='utf-8') as f:
             content = f.read()
     
     content = content.strip()
-    match = re.match(r'(?is)^style\((.*)\)$', content)
+    match = _re.match(r'(?is)^style\((.*)\)$', content)
     if match:
         content = match.group(1).strip()
-    return parse_data_arg(content, context)
+    return _parse_data_arg(content, context)
 
-def load_data(filepath_or_str: Union[str, list], context: dict = None) -> list[list[CellDesc]]:
+def _load_data(filepath_or_str: _Union[str, list], context: dict = None) -> list[list[CellDesc]]:
     if not isinstance(filepath_or_str, str):
         return filepath_or_str
     
     content = filepath_or_str
-    if os.path.exists(filepath_or_str):
+    if _os.path.exists(filepath_or_str):
         with open(filepath_or_str, 'r', encoding='utf-8') as f:
             content = f.read()
     
     content = content.strip()
-    match = re.match(r'(?is)^data\((.*)\)$', content)
+    match = _re.match(r'(?is)^data\((.*)\)$', content)
     if match:
         content = match.group(1).strip()
-    return parse_data_arg(content, context)
+    return _parse_data_arg(content, context)
 
-def csv(filepath_or_url: str) -> list[list[CellDesc]]:
-    raw_data = load_csv(filepath_or_url)
+def _csv_load(filepath_or_url: str) -> list[list[CellDesc]]:
+    raw_data = _load_csv(filepath_or_url)
     grid = []
     for r in raw_data:
         row = []
@@ -1094,11 +1130,11 @@ def csv(filepath_or_url: str) -> list[list[CellDesc]]:
         grid.append(row)
     return grid
 
-def compile(style: Any, data: Any, preamble: Any = None, context: dict = None) -> TableModel:
-    style_grid = load_style(style, context)
-    data_grid = load_data(data, context)
+def compile(style: _Any, data: _Any, preamble: _Any = None, context: dict = None) -> TableModel:
+    style_grid = _load_style(style, context)
+    data_grid = _load_data(data, context)
     
-    cells_grid = overlay_style_and_data(style_grid, data_grid)
+    cells_grid = _overlay_style_and_data(style_grid, data_grid)
     
     rows = len(cells_grid)
     cols = max(len(row) for row in cells_grid) if cells_grid else 0
@@ -1110,7 +1146,7 @@ def compile(style: Any, data: Any, preamble: Any = None, context: dict = None) -
 
     if preamble:
         if isinstance(preamble, str):
-            p_args = parse_args_string(preamble)
+            p_args = _parse_args_string(preamble)
             if len(p_args) >= 6:
                 rows = int(p_args[0])
                 cols = int(p_args[1])
@@ -1148,11 +1184,31 @@ def compile(style: Any, data: Any, preamble: Any = None, context: dict = None) -
         cell_height=cell_height
     )
 
-def render(style_or_formula: Any, data: Any = None, preamble: Any = None, context: dict = None) -> str:
+def render(style_or_formula: _Any, data: _Any = None, preamble: _Any = None, context: dict = None) -> str:
     """
-    Renders a table to HTML. Supports:
-    1. render(formula, context)
-    2. render(style, data, preamble, context)
+    Renders a TenTags table directly to an HTML string.
+
+    Supports two calling styles:
+    
+    1. Render a self-contained layout formula:
+       >>> import tentags
+       >>> html = tentags.render('3,3,1,"black","solid",0, data(A,B,C; D,E,F; G,H,I)')
+
+    2. Render with decoupled style templates, data blocks, and optional preambles:
+       >>> import tentags
+       >>> style = 'style(<bg=white><center><b><cm>Title, , </cm></b></center></bg>; <center>Header 1</center>, <center>Header 2</center>, <center>Header 3</center>; A, B, C)'
+       >>> data = 'data( , , ; , , ; Value A, Value B, Value C)'
+       >>> preamble = '3, 3, 1, "blue", "solid-1"'
+       >>> html = tentags.render(style=style, data=data, preamble=preamble)
+
+    Parameters:
+        style_or_formula: Either a self-contained TenTags formula string, or a layout style block.
+        data: Optional content data block (string or list of cells).
+        preamble: Optional layout size & border preamble (string or dict).
+        context: Optional dictionary of variable substitutions.
+
+    Returns:
+        A formatted <table>...</table> HTML string.
     """
     if isinstance(data, dict) and preamble is None and context is None:
         context = data
@@ -1389,17 +1445,23 @@ def info() -> None:
     """
     import sys
     feats = features()
-    renderers = ["HTML"]
-    if feats["pdf"]:
-        renderers.append("PDF")
-    if feats["xlsx"]:
-        renderers.append("XLSX")
-        
-    print(f"TenTags {__version__}")
-    print(f"Python {sys.version.split()[0]}")
-    print(f"Renderers: {' '.join(renderers)}")
-    print(f"License: {__license__}")
-    print(f"Website: {__homepage__}")
+    
+    print(f"TenTags {__version__}\n")
+    print(f"Python      {sys.version.split()[0]}")
+    print(f"License     {__license__}")
+    print(f"Website     {__homepage__}\n")
+    
+    print("Renderers")
+    print(f"{'✔' if feats['html'] else '✘'} HTML")
+    print(f"{'✔' if feats['pdf'] else '✘'} PDF")
+    print(f"{'✔' if feats['xlsx'] else '✘'} XLSX\n")
+    
+    print("Core Features")
+    print("✔ DSL Parser")
+    print("✔ Range Expansion (A1:D3)")
+    print("✔ Merged Cells (<cm>, <rm>)")
+    print("✔ Decoupled Styles & Data")
+    print("✔ Multi-Table Reports")
 
 def validate(formula: str) -> dict:
     """

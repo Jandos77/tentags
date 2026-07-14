@@ -140,8 +140,8 @@ def test_load_style_and_data_api():
     Sales, 1000
     '''
     
-    style = tentags.load_style(style_content)
-    data = tentags.load_data(data_content)
+    style = tentags._load_style(style_content)
+    data = tentags._load_data(data_content)
     
     model = tentags.compile(style, data, preamble='1,"#ccc","solid",0,40')
     

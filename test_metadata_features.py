@@ -10,8 +10,8 @@ def test_metadata_features():
     print(f"Homepage: {tentags.__homepage__}")
     print(f"Version Info: {tentags.version_info}")
     
-    assert tentags.__version__ == "1.1.3"
-    assert tentags.version_info == (1, 1, 3)
+    assert tentags.__version__ == "1.1.4"
+    assert tentags.version_info == (1, 1, 4)
     
     # 2. Check info()
     print("\n--- Running tentags.info() ---")
