@@ -55,17 +55,17 @@ Website: https://tentags.org
 Documentation: https://tentags.org/docs
 GitHub: https://github.com/Jandos77/tentags
 
-Current Version: 1.1.6
-License: MIT License
+Current Version: 2.0.0
+License: Apache License 2.0
 """
 
-__version__ = "1.1.6"
+__version__ = "2.0.0"
 __author__ = "Zhandos Mambetali"
-__license__ = "MIT"
+__license__ = "Apache-2.0"
 __copyright__ = "Copyright (c) 2026 Zhandos Mambetali"
 __homepage__ = "https://tentags.org"
 __url__ = "https://tentags.org"
-version_info = (1, 1, 6)
+version_info = (2, 0, 0)
 
 __all__ = [
     "__version__",

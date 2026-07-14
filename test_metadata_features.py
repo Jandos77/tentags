@@ -13,8 +13,9 @@ def test_metadata_features():
     print(f"Copyright: {tentags.__copyright__}")
     print(f"URL: {tentags.__url__}")
     
-    assert tentags.__version__ == "1.1.6"
-    assert tentags.version_info == (1, 1, 6)
+    assert tentags.__version__ == "2.0.0"
+    assert tentags.version_info == (2, 0, 0)
+    assert tentags.__license__ == "Apache-2.0"
     assert tentags.__copyright__ == "Copyright (c) 2026 Zhandos Mambetali"
     assert tentags.__url__ == "https://tentags.org"
     
