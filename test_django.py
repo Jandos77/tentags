@@ -28,14 +28,17 @@ except ImportError:
 def test_django_block_tag():
     template_str = """
     {% tt %}
-    1, 1, 1, "black", "solid", 0,
-    data(Hello {{ name }})
+    2, 1, 1, "black", "solid", 0,
+    data(Hello {{ name }}; Yow are You ?)
     {% endtt %}
     """
     
     t = Template(template_str)
     c = Context({"name": "Django"})
     html = t.render(c)
+    
+    print("\n--- Django Block Tag HTML Output ---")
+    print(html)
     
     assert "Hello Django" in html
     assert "<table" in html
@@ -52,6 +55,18 @@ def test_django_inline_tag():
     c = Context({})
     html = t.render(c)
     
+    print("\n--- Django Inline Tag HTML Output ---")
+    print(html)
+    
     assert "Hello Inline" in html
     assert "<table" in html
     assert "&lt;" not in html
+
+if __name__ == "__main__":
+    if HAS_DJANGO:
+        print("=== Running Django Template Tag Tests ===")
+        test_django_block_tag()
+        test_django_inline_tag()
+        print("\nAll Django tests passed successfully!")
+    else:
+        print("Django is not installed in the environment.")
