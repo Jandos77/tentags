@@ -432,6 +432,9 @@ def _parse_data_arg(content: str, context: dict = None):
             elif tag_lower == 'bg':
                 if active_tok.attr:
                     cell.styles['background-color'] = active_tok.attr
+            elif tag_lower == 'url':
+                if active_tok.attr:
+                    cell.styles['href'] = active_tok.attr
             elif tag_lower == 'fs':
                 if active_tok.attr:
                     cell.styles['font-size'] = active_tok.attr if any(c.isalpha() or c == '%' for c in active_tok.attr) else f"{active_tok.attr}px"
@@ -766,15 +769,23 @@ def render_html(model: TableModel) -> str:
                 if cell.border_flags & BorderFlags.HIDE_BOTTOM:
                     border_overrides.append("border-bottom:none;")
 
-                # Serialize inline styles
+                # Serialize inline styles (excluding href which is rendered as anchor tag)
+                href = None
                 for prop, prop_val in cell.styles.items():
-                    border_overrides.append(f"{prop}:{prop_val};")
+                    if prop == 'href':
+                        href = prop_val
+                    else:
+                        border_overrides.append(f"{prop}:{prop_val};")
 
             overrides_css = "".join(border_overrides)
             td_style = f"{td_border}padding:0;{overrides_css}"
             
             if model.stretch == 0:
                 td_style += f"height:{model.cell_height}px;"
+
+            # Wrap with anchor if url tag was used
+            if href:
+                val = f'<a href="{href}" style="color:inherit;text-decoration:inherit;">{val}</a>'
 
             html.append(f'<td style="{td_style}">{val}</td>')
         html.append('</tr>')
@@ -897,6 +908,18 @@ def _write_model_to_sheet(model: TableModel, ws, start_row: int = 1):
                     end_color=bg_color, 
                     fill_type='solid'
                 )
+
+            # Apply hyperlink if url tag was used
+            if 'href' in cell_styles:
+                cell_ref.hyperlink = cell_styles['href']
+                # Apply standard hyperlink styling if no color already set
+                if 'color' not in cell_styles:
+                    cell_ref.font = Font(
+                        bold=is_bold, italic=is_italic,
+                        size=font_size,
+                        underline='single',
+                        color='0563C1'  # Excel default hyperlink blue
+                    )
 
     # Find connected components of merged cells to apply spreadsheet merges
     visited = set()
@@ -1111,6 +1134,12 @@ def _create_pdf_table_object(model: TableModel):
             if is_strike:
                 table_styles.append(('STRIKETHROUGH', (c, r), (c, r)))
 
+            href_pdf = cell_styles.get('href')
+            if href_pdf and 'color' not in cell_styles:
+                # Default hyperlink blue
+                table_styles.append(('TEXTCOLOR', (c, r), (c, r), colors.HexColor('#0563C1')))
+                table_styles.append(('UNDERLINE', (c, r), (c, r)))
+
             if val != '':
                 rl_align = 1 # center
                 if h_align == 'LEFT':
@@ -1131,6 +1160,8 @@ def _create_pdf_table_object(model: TableModel):
                     cell_text = f'<u>{cell_text}</u>'
                 if is_strike:
                     cell_text = f'<strike>{cell_text}</strike>'
+                if href_pdf:
+                    cell_text = f'<link href="{href_pdf}">{cell_text}</link>'
                 row_data.append(Paragraph(cell_text, p_style))
             else:
                 row_data.append("")

@@ -80,6 +80,17 @@ def test_html_combined_decorations():
     assert "line-through" in html
     assert ">Both</td>" in html
 
+def test_html_url_tag():
+    # Test <url=...> clickable link tag
+    expr = '1,2,1,"#000","solid",0,40, data(<url=https://example.com>Visit Site</url>, Plain)'
+    html = tentags.render(expr)
+    
+    assert '<a href="https://example.com"' in html
+    assert '>Visit Site</a>' in html
+    assert '>Plain</td>' in html
+    # href must NOT appear in td style attribute
+    assert 'href:' not in html
+
 def test_html_alignment_and_font_size():
     # Test <fs=XX>, <left>, <center>, <right> tags
     expr = '1,3,1,"#000","solid",0,40, data(<fs=16><left>Left 16</left></fs>, <center>Center</center>, <right>Right</right>)'
