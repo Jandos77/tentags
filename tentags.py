@@ -1,8 +1,8 @@
-__version__ = "1.1.2"
+__version__ = "1.1.3"
 __author__ = "Zhandos Mambetali"
 __license__ = "MIT"
 __homepage__ = "https://tentags.org"
-version_info = (1, 1, 2)
+version_info = (1, 1, 3)
 
 import re
 import csv as _csv

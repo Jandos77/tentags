@@ -286,6 +286,51 @@ tentags.render_pdf(model, "Enterprise_Budget_Matrix.pdf")
 
 ## 🛠️ API Reference
 
+### Module Constants & Metadata
+- **`tentags.__version__`**: Library version string (e.g., `'1.1.2'`).
+- **`tentags.version_info`**: Version tuple for checking compatibility (e.g., `(1, 1, 2)`).
+- **`tentags.__author__`**: Author name (`'Zhandos Mambetali'`).
+- **`tentags.__license__`**: Project license (`'MIT'`).
+- **`tentags.__homepage__`**: Link to home website (`'https://tentags.org'`).
+
+### Diagnostic & Utility Helpers
+
+#### `tentags.info() -> None`
+Prints runtime system information and status of optional render backends to the console.
+Example output:
+```text
+TenTags 1.1.2
+Python 3.14.0
+Renderers: HTML PDF XLSX
+License: MIT
+Website: https://tentags.org
+```
+
+#### `tentags.features() -> dict`
+Checks the availability of optional rendering backends. Returns a dictionary:
+```python
+{
+    "html": True,
+    "pdf": True,   # True if reportlab is installed
+    "xlsx": True   # True if openpyxl is installed
+}
+```
+
+#### `tentags.validate(formula: str) -> dict`
+Syntactically checks a TenTags formula's layout configuration and markup tag balance. Returns a status dictionary:
+- Success: `{"status": "ok", "message": "Syntax OK"}`
+- Failure: `{"status": "error", "message": "Missing closing tag </b>..."}`
+
+#### `tentags.demo(name: str = "dashboard") -> None`
+Generates out-of-the-box demo rendering outputs in current directory. 
+Supported templates: `'dashboard'`, `'invoice'`, `'table'`. Example:
+```python
+import tentags
+tentags.demo("invoice") # Generates HTML, XLSX, and PDF invoices on the fly
+```
+
+### Core API Functions
+
 ### `tentags.render(formula: str, context: dict = None) -> str`
 Parses the input DSL formula string and returns a complete `<table>...</table>` HTML string.
 - **`formula`**: String in format `'rows, cols, border_width, "border_color", "border_style", margin, row_height, data(...)'`.
