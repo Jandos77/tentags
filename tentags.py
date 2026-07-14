@@ -1,3 +1,9 @@
+__version__ = "1.1.2"
+__author__ = "Zhandos Mambetali"
+__license__ = "MIT"
+__homepage__ = "https://tentags.org"
+version_info = (1, 1, 2)
+
 import re
 import csv as _csv
 import urllib.request
@@ -1352,3 +1358,94 @@ def multitable_pdf(
             story.append(PageBreak())
 
     doc.build(story)
+
+def features() -> dict:
+    """
+    Checks the availability of optional rendering backends.
+    """
+    has_pdf = False
+    try:
+        from reportlab.platypus import SimpleDocTemplate
+        has_pdf = True
+    except ImportError:
+        pass
+
+    has_xlsx = False
+    try:
+        import openpyxl
+        has_xlsx = True
+    except ImportError:
+        pass
+
+    return {
+        "html": True,
+        "pdf": has_pdf,
+        "xlsx": has_xlsx
+    }
+
+def info() -> None:
+    """
+    Prints system information and available features to the console.
+    """
+    import sys
+    feats = features()
+    renderers = ["HTML"]
+    if feats["pdf"]:
+        renderers.append("PDF")
+    if feats["xlsx"]:
+        renderers.append("XLSX")
+        
+    print(f"TenTags {__version__}")
+    print(f"Python {sys.version.split()[0]}")
+    print(f"Renderers: {' '.join(renderers)}")
+    print(f"License: {__license__}")
+    print(f"Website: {__homepage__}")
+
+def validate(formula: str) -> dict:
+    """
+    Validates a TenTags formula's syntax and tag balance.
+    Returns a dict with 'status' ('ok' or 'error') and a descriptive message.
+    """
+    if not isinstance(formula, str):
+        return {"status": "error", "message": "Formula must be a string."}
+        
+    try:
+        parse(formula)
+        return {"status": "ok", "message": "Syntax OK"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+def demo(name: str = "dashboard", filepath_prefix: str = "demo") -> None:
+    """
+    Generates a demonstration report to showcase TenTags output formats.
+    Supported names: 'dashboard', 'invoice', 'table'.
+    """
+    name = name.lower()
+    if name == "dashboard":
+        preamble = '4, 4, 1, "#cbd5e1", "solid", 0, 45'
+        style = 'style(<fs=18><bg=#1e293b><color=white><b><cm>Q3 Financial Performance Dashboard, , , , </cm></b></color></bg></fs>; <bg=#f1f5f9><b><left>Department</left></b></bg>, <bg=#f1f5f9><b><center>Revenue</center></b></bg>, <bg=#f1f5f9><b><center>Expenses</center></b></bg>, <bg=#f1f5f9><b><center>Net Profit</center></b></bg>; <left>Engineering</left>, <right>"$240,000"</right>, <right>"$180,000"</right>, <bg=#dcfce7><color=#166534><b><right>"+$60,000"</right></b></color></bg>; <left>Sales & Marketing</left>, <right>"$310,000"</right>, <right>"$210,000"</right>, <bg=#dcfce7><color=#166534><b><right>"+$100,000"</right></b></color></bg>)'
+        data = 'data()'
+    elif name == "invoice":
+        preamble = '7, 4, 1, "#e2e8f0", "solid-1", 1, 30'
+        style = 'style(<fs=16><b><left><cm>INVOICE #1024, , , </cm></left></b></fs>; <left><cm>Date: 2026-07-14, , , </cm></left>; <bg=#3b82f6><color=white><b>Item</b></color></bg>, <bg=#3b82f6><color=white><b>Quantity</b></color></bg>, <bg=#3b82f6><color=white><b>Price</b></color></bg>, <bg=#3b82f6><color=white><b>Total</b></color></bg>; ; ; ; <right><b><cm>Grand Total: , , </cm></b></right>, <b>$1,650</b>)'
+        data = 'data( , , , ; , , , ; Premium Wood Logs, 10, $150, $1,500; Steel Beams, 5, $30, $150; , , , )'
+    else:
+        preamble = '3, 3, 1, "green", "solid-1", 1'
+        style = 'style(<bg=white><center><b><cm>Test Table, , </cm></b></center></bg>; <center><b>Header 1</b></center>, <center><b>Header 2</b></center>, <center><b>Header 3</b></center>; <left>A1</left>, <center>B1</center>, <right>C1</right>)'
+        data = 'data()'
+
+    model = compile(style=style, data=data, preamble=preamble)
+    
+    html_content = render_html(model)
+    with open(f"{filepath_prefix}_{name}.html", "w", encoding="utf-8") as f:
+        f.write(html_content)
+    print(f"Generated HTML demo: {filepath_prefix}_{name}.html")
+
+    feats = features()
+    if feats["xlsx"]:
+        render_xlsx(model, f"{filepath_prefix}_{name}.xlsx")
+        print(f"Generated Excel demo: {filepath_prefix}_{name}.xlsx")
+        
+    if feats["pdf"]:
+        render_pdf(model, f"{filepath_prefix}_{name}.pdf")
+        print(f"Generated PDF demo: {filepath_prefix}_{name}.pdf")
