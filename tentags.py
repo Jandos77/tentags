@@ -700,21 +700,8 @@ def normalize_color_to_hex(color_str: str) -> str:
         
     return '000000'
 
-def render_xlsx(model: TableModel, filepath_or_stream):
-    """
-    Renders a TableModel into an Excel (.xlsx) file.
-    Requires openpyxl to be installed.
-    """
-    try:
-        import openpyxl
-        from openpyxl.styles import Border, Side, Alignment, Font, PatternFill
-    except ImportError:
-        raise ImportError("The 'openpyxl' package is required for Excel rendering. Please install it using 'pip install openpyxl'.")
-
-    wb = openpyxl.Workbook()
-    # Remove default active sheet
-    wb.remove(wb.active)
-    ws = wb.create_sheet(title="Table")
+def _write_model_to_sheet(model: TableModel, ws, start_row: int = 1):
+    from openpyxl.styles import Border, Side, Alignment, Font, PatternFill
     
     # Configure borders mapping
     border_style = str(model.border_style).strip().lower()
@@ -743,10 +730,10 @@ def render_xlsx(model: TableModel, filepath_or_stream):
     # Write values, borders, alignments, and heights
     for r in range(model.rows):
         if model.stretch == 0:
-            ws.row_dimensions[r + 1].height = model.cell_height
+            ws.row_dimensions[start_row + r].height = model.cell_height
             
         for c in range(model.cols):
-            cell_ref = ws.cell(row=r + 1, column=c + 1)
+            cell_ref = ws.cell(row=start_row + r, column=c + 1)
             
             val = ""
             cell_styles = {}
@@ -854,29 +841,33 @@ def render_xlsx(model: TableModel, filepath_or_stream):
                 min_c = min(x[1] for x in component)
                 max_c = max(x[1] for x in component)
                 ws.merge_cells(
-                    start_row=min_r + 1, 
+                    start_row=start_row + min_r, 
                     start_column=min_c + 1, 
-                    end_row=max_r + 1, 
+                    end_row=start_row + max_r, 
                     end_column=max_c + 1
                 )
-                
-    wb.save(filepath_or_stream)
 
-def render_pdf(model: TableModel, filepath_or_stream: Union[str, Any]) -> None:
+def render_xlsx(model: TableModel, filepath_or_stream):
     """
-    Renders a TableModel directly to a PDF document using ReportLab.
-    Translates IR coordinates, merged regions, background fills, fonts, and borders into native ReportLab TableStyles.
+    Renders a TableModel into an Excel (.xlsx) file.
+    Requires openpyxl to be installed.
     """
     try:
-        from reportlab.lib.pagesizes import letter, landscape
-        from reportlab.lib import colors
-        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
-        from reportlab.lib.styles import ParagraphStyle
+        import openpyxl
     except ImportError:
-        raise ImportError(
-            "The 'reportlab' package is required for PDF rendering. "
-            "Install it via 'pip install tentags[pdf]' or 'pip install reportlab'."
-        )
+        raise ImportError("The 'openpyxl' package is required for Excel rendering. Please install it using 'pip install openpyxl'.")
+
+    wb = openpyxl.Workbook()
+    # Remove default active sheet
+    wb.remove(wb.active)
+    ws = wb.create_sheet(title="Table")
+    _write_model_to_sheet(model, ws, start_row=1)
+    wb.save(filepath_or_stream)
+
+def _create_pdf_table_object(model: TableModel):
+    from reportlab.lib import colors
+    from reportlab.platypus import Table, TableStyle, Paragraph
+    from reportlab.lib.styles import ParagraphStyle
 
     # Convert border/background color to reportlab color
     def hex_to_rl_color(hex_str: str, default=colors.black):
@@ -1022,6 +1013,26 @@ def render_pdf(model: TableModel, filepath_or_stream: Union[str, Any]) -> None:
                 row_data.append("")
         data_matrix.append(row_data)
 
+    row_heights = None
+    if model.stretch == 0 and model.cell_height > 0:
+        row_heights = [max(25, model.cell_height)] * model.rows
+
+    return Table(data_matrix, rowHeights=row_heights, style=TableStyle(table_styles))
+
+def render_pdf(model: TableModel, filepath_or_stream: Union[str, Any]) -> None:
+    """
+    Renders a TableModel directly to a PDF document using ReportLab.
+    Translates IR coordinates, merged regions, background fills, fonts, and borders into native ReportLab TableStyles.
+    """
+    try:
+        from reportlab.lib.pagesizes import letter, landscape
+        from reportlab.platypus import SimpleDocTemplate
+    except ImportError:
+        raise ImportError(
+            "The 'reportlab' package is required for PDF rendering. "
+            "Install it via 'pip install tentags[pdf]' or 'pip install reportlab'."
+        )
+
     doc = SimpleDocTemplate(
         filepath_or_stream,
         pagesize=landscape(letter) if model.cols > 4 else letter,
@@ -1031,12 +1042,7 @@ def render_pdf(model: TableModel, filepath_or_stream: Union[str, Any]) -> None:
         bottomMargin=36
     )
 
-    row_heights = None
-    if model.stretch == 0 and model.cell_height > 0:
-        row_heights = [max(25, model.cell_height)] * model.rows
-
-    table = Table(data_matrix, rowHeights=row_heights, style=TableStyle(table_styles))
-
+    table = _create_pdf_table_object(model)
     doc.build([table])
 
 def load_style(filepath_or_str: Union[str, list], context: dict = None) -> list[list[CellDesc]]:
@@ -1154,3 +1160,195 @@ def render(style_or_formula: Any, data: Any = None, preamble: Any = None, contex
         return render_html(model)
     except Exception as e:
         return str(e)
+
+def multitable_html(
+    tables: list, 
+    layout: str = "vertical", 
+    cols: int = 1, 
+    gap: str = "24px", 
+    full_page: bool = False, 
+    context: dict = None
+) -> str:
+    """
+    Assembles and renders multiple tables into a single HTML string.
+    """
+    rendered_tables = []
+    for item in tables:
+        if isinstance(item, TableModel):
+            model = item
+            title = None
+        elif isinstance(item, dict):
+            model = compile(
+                style=item.get("style"),
+                data=item.get("data"),
+                preamble=item.get("preamble"),
+                context=context
+            )
+            title = item.get("title")
+        else:
+            raise TypeError("Each table in 'tables' must be a TableModel or a dict.")
+        
+        table_html = render_html(model)
+        if title:
+            table_html = f"<div><h3>{title}</h3>{table_html}</div>"
+        rendered_tables.append(table_html)
+
+    if layout == "grid":
+        style_container = f"display: grid; grid-template-columns: repeat({cols}, 1fr); gap: {gap};"
+    else:
+        style_container = f"display: flex; flex-direction: column; gap: {gap};"
+
+    container = f'<div style="{style_container}">\n' + "\n".join(rendered_tables) + '\n</div>'
+
+    if full_page:
+        return f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Multi-Table Report</title>
+</head>
+<body>
+    {container}
+</body>
+</html>"""
+    return container
+
+def multitable_xlsx(
+    tables: list, 
+    filepath_or_stream, 
+    mode: str = "sheets", 
+    gap: int = 3, 
+    show_titles: bool = True, 
+    context: dict = None
+) -> None:
+    """
+    Assembles and renders multiple tables into a single Excel (.xlsx) workbook.
+    """
+    try:
+        import openpyxl
+        from openpyxl.styles import Font
+    except ImportError:
+        raise ImportError("The 'openpyxl' package is required for Excel rendering. Please install it using 'pip install openpyxl'.")
+
+    wb = openpyxl.Workbook()
+    wb.remove(wb.active)
+
+    if mode == "sheets":
+        for i, item in enumerate(tables):
+            if isinstance(item, TableModel):
+                model = item
+                sheet_name = f"Table {i + 1}"
+            elif isinstance(item, dict):
+                model = compile(
+                    style=item.get("style"),
+                    data=item.get("data"),
+                    preamble=item.get("preamble"),
+                    context=context
+                )
+                sheet_name = item.get("sheet_name") or f"Table {i + 1}"
+            else:
+                raise TypeError("Each table in 'tables' must be a TableModel or a dict.")
+            
+            ws = wb.create_sheet(title=sheet_name)
+            _write_model_to_sheet(model, ws, start_row=1)
+    else: # stacked
+        ws = wb.create_sheet(title="Report")
+        current_row = 1
+        for i, item in enumerate(tables):
+            if isinstance(item, TableModel):
+                model = item
+                title = None
+            elif isinstance(item, dict):
+                model = compile(
+                    style=item.get("style"),
+                    data=item.get("data"),
+                    preamble=item.get("preamble"),
+                    context=context
+                )
+                title = item.get("title")
+            else:
+                raise TypeError("Each table in 'tables' must be a TableModel or a dict.")
+            
+            if show_titles and title:
+                cell = ws.cell(row=current_row, column=1)
+                cell.value = title
+                cell.font = Font(bold=True, size=14)
+                current_row += 1
+            
+            _write_model_to_sheet(model, ws, start_row=current_row)
+            current_row += model.rows + gap
+
+    wb.save(filepath_or_stream)
+
+def multitable_pdf(
+    tables: list, 
+    filepath_or_stream, 
+    page_size: str = "letter", 
+    orientation: str = "portrait", 
+    page_break_after_each: bool = True, 
+    margins: tuple = (36, 36, 36, 36), 
+    context: dict = None
+) -> None:
+    """
+    Assembles and renders multiple tables into a single PDF document.
+    """
+    try:
+        from reportlab.lib.pagesizes import letter, landscape
+        from reportlab.platypus import SimpleDocTemplate, PageBreak, Paragraph
+        from reportlab.lib.styles import ParagraphStyle
+    except ImportError:
+        raise ImportError(
+            "The 'reportlab' package is required for PDF rendering. "
+            "Install it via 'pip install tentags[pdf]' or 'pip install reportlab'."
+        )
+
+    # Resolve page size
+    base_page_size = letter
+    if page_size.lower() == "a4":
+        from reportlab.lib.pagesizes import A4
+        base_page_size = A4
+
+    actual_page_size = landscape(base_page_size) if orientation.lower() == "landscape" else base_page_size
+
+    doc = SimpleDocTemplate(
+        filepath_or_stream,
+        pagesize=actual_page_size,
+        leftMargin=margins[0],
+        rightMargin=margins[1],
+        topMargin=margins[2],
+        bottomMargin=margins[3]
+    )
+
+    story = []
+    for i, item in enumerate(tables):
+        if isinstance(item, TableModel):
+            model = item
+            title = None
+        elif isinstance(item, dict):
+            model = compile(
+                style=item.get("style"),
+                data=item.get("data"),
+                preamble=item.get("preamble"),
+                context=context
+            )
+            title = item.get("title")
+        else:
+            raise TypeError("Each table in 'tables' must be a TableModel or a dict.")
+
+        if title:
+            p_style = ParagraphStyle(
+                f"Title_{i}", 
+                fontName="Helvetica-Bold", 
+                fontSize=14, 
+                leading=18, 
+                spaceAfter=10
+            )
+            story.append(Paragraph(title, p_style))
+
+        table_obj = _create_pdf_table_object(model)
+        story.append(table_obj)
+
+        if page_break_after_each and i < len(tables) - 1:
+            story.append(PageBreak())
+
+    doc.build(story)
