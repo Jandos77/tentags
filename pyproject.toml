@@ -59,4 +59,4 @@ Repository = "https://github.com/Jandos77/tentags"
 Issues = "https://github.com/Jandos77/tentags/issues"
 
 [tool.setuptools]
-packages = ["tentags", "tentags.contrib"]
+packages = ["tentags", "tentags.contrib", "tentags.templatetags"]
