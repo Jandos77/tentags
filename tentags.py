@@ -3,34 +3,69 @@ TenTags
 =======
 
 Declarative Document DSL.
-Generate HTML, PDF, and XLSX documents from a single declarative source.
+
+Write a document once.
+Render it everywhere.
+
+HTML • PDF • XLSX
 
 Quick Start
 -----------
 
->>> import tentags
->>> html = tentags.render('3,3,1,"black","solid",0, data(A,B,C; D,E,F; G,H,I)')
+    import tentags
+    html = tentags.render('3,3,1,"black","solid",0, data(A,B,C; D,E,F; G,H,I)')
 
-Website
--------
-https://tentags.org
+Typical Workflow
+----------------
 
-Documentation
--------------
-https://tentags.org/docs
+1. Define style.
+2. Define data.
+3. Compile into TableModel.
+4. Render to HTML, PDF or XLSX.
 
-GitHub
-------
-https://github.com/Jandos77/tentags
+or simply:
+
+    html = tentags.render(formula)
+
+API Index
+---------
+
+Main API:
+  render()           Render HTML
+  compile()          Build TableModel
+  parse()            Parse formula
+  validate()         Validate syntax
+
+Export:
+  render_html()      Render to HTML string
+  render_pdf()       Export to PDF document
+  render_xlsx()      Export to XLSX sheet
+
+Multiple Tables:
+  multitable_html()  Combine tables into HTML Grid
+  multitable_pdf()   Combine tables into multi-page PDF
+  multitable_xlsx()  Combine tables into Excel workbook
+
+Utilities:
+  demo()             Generate sample documents
+  info()             Display system diagnostic info
+  features()         Check available render backends
+
+Website: https://tentags.org
+Documentation: https://tentags.org/docs
+GitHub: https://github.com/Jandos77/tentags
+
+Current Version: 1.1.6
+License: MIT License
 """
 
-__version__ = "1.1.5"
+__version__ = "1.1.6"
 __author__ = "Zhandos Mambetali"
 __license__ = "MIT"
 __copyright__ = "Copyright (c) 2026 Zhandos Mambetali"
 __homepage__ = "https://tentags.org"
 __url__ = "https://tentags.org"
-version_info = (1, 1, 5)
+version_info = (1, 1, 6)
 
 __all__ = [
     "__version__",
@@ -1149,6 +1184,11 @@ def _csv_load(filepath_or_url: str) -> list[list[CellDesc]]:
     return grid
 
 def compile(style: _Any, data: _Any, preamble: _Any = None, context: dict = None) -> TableModel:
+    """
+    Compiles TenTags style and data sources into an intermediate representation (TableModel).
+    
+    The returned TableModel can later be rendered into HTML, PDF, or XLSX formats.
+    """
     style_grid = _load_style(style, context)
     data_grid = _load_data(data, context)
     
@@ -1435,7 +1475,14 @@ def multitable_pdf(
 
 def features() -> dict:
     """
-    Checks the availability of optional rendering backends.
+    Returns the availability of optional render backends depending on local dependencies.
+
+    Example output:
+    {
+        "html": True,
+        "pdf": True,
+        "xlsx": False
+    }
     """
     has_pdf = False
     try:
@@ -1459,7 +1506,8 @@ def features() -> dict:
 
 def info() -> None:
     """
-    Prints system information and available features to the console.
+    Prints package version, available renderers, optional dependencies,
+    and system diagnostic information to the console.
     """
     import sys
     feats = features()
