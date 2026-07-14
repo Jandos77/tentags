@@ -28,8 +28,8 @@ except ImportError:
 def test_django_block_tag():
     template_str = """
     {% tt %}
-    2, 1, 1, "black", "solid", 0,
-    data(Hello {{ name }}; Yow are You ?)
+    2, 1, 1, "black", "solid-1", 0, 50,
+    data(<bg=yellow><color=blue>Hello {{ name }}</color></bg>; Yow are You ?)
     {% endtt %}
     """
     
