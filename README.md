@@ -8,7 +8,7 @@
 
 [![PyPI version](https://img.shields.io/pypi/v/tentags.svg)](https://pypi.org/project/tentags/)
 [![Python versions](https://img.shields.io/pypi/pyversions/tentags.svg)](https://pypi.org/project/tentags/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 **TenTags** is a declarative template language and **Intermediate Representation (IR)** for automated **HTML**, **Excel (`.xlsx`)**, and **PDF** table and document generation.
 
@@ -287,11 +287,13 @@ tentags.render_pdf(model, "Enterprise_Budget_Matrix.pdf")
 ## 🛠️ API Reference
 
 ### Module Constants & Metadata
-- **`tentags.__version__`**: Library version string (e.g., `'1.1.2'`).
-- **`tentags.version_info`**: Version tuple for checking compatibility (e.g., `(1, 1, 2)`).
+- **`tentags.__version__`**: Library version string (e.g., `'2.0.0'`).
+- **`tentags.version_info`**: Version tuple for checking compatibility (e.g., `(2, 0, 0)`).
 - **`tentags.__author__`**: Author name (`'Zhandos Mambetali'`).
-- **`tentags.__license__`**: Project license (`'MIT'`).
+- **`tentags.__license__`**: Project license (`'Apache-2.0'`).
 - **`tentags.__homepage__`**: Link to home website (`'https://tentags.org'`).
+- **`tentags.__url__`**: Canonical library URL (`'https://tentags.org'`).
+- **`tentags.__copyright__`**: Copyright notice (`'Copyright (c) 2026 Zhandos Mambetali'`).
 
 ### Diagnostic & Utility Helpers
 
@@ -299,10 +301,9 @@ tentags.render_pdf(model, "Enterprise_Budget_Matrix.pdf")
 Prints runtime system information and status of optional render backends to the console.
 Example output:
 ```text
-TenTags 1.1.2
+TenTags 2.0.0
 Python 3.14.0
-Renderers: HTML PDF XLSX
-License: MIT
+License: Apache-2.0
 Website: https://tentags.org
 ```
 
@@ -433,12 +434,73 @@ Assembles and renders multiple tables into a single PDF document.
 
 ---
 
+## 🔌 Web Framework & Template Integrations (v2.0.0+)
+
+TenTags comes with built-in integrations for popular Python web engines under `tentags.contrib` and Django package structures.
+
+### 1. Django Template Tags
+
+If `tentags` is added to `INSTALLED_APPS` in your Django `settings.py`, Django will automatically discover the template tags.
+
+In your HTML template:
+```html
+{% load tentags %}
+
+<!-- Block tag (supports short {% tt %} alias as well) -->
+{% tt %}
+2, 1, 1, "black", "solid-1", 0, 50,
+data(
+    Item, Quantity;
+    {{ product.name }}, {{ product.qty }}
+)
+{% endtt %}
+
+<!-- Inline tag -->
+{% tentags_inline formula_string %}
+```
+
+### 2. Jinja2 / Flask / FastAPI
+
+TenTags provides a Jinja2 Extension (`TenTagsExtension`) and global helper function (`tentags`).
+
+#### FastAPI Integration
+```python
+from fastapi.templating import Jinja2Templates
+from tentags.contrib.fastapi import register_templates
+
+templates = Jinja2Templates(directory="templates")
+register_templates(templates)
+```
+
+#### Flask Integration
+```python
+from flask import Flask
+from tentags.contrib.flask import init_app
+
+app = Flask(__name__)
+init_app(app)
+```
+
+#### In your Jinja2 Templates:
+```html
+<!-- Block Tag (supports short {% tt %} alias as well) -->
+{% tt rows=2 cols=2 border_width=3 border_color="blue" %}
+A, B;
+C, D
+{% endtt %}
+
+<!-- Inline Function -->
+{{ tentags(formula_string) }}
+```
+
+---
+
 ## 🧪 Running Tests
 
 To run the standalone test suite and generate sample visual outputs:
 
 ```bash
-python test_library.py
+PYTHONPATH=. pytest
 ```
 
 Generated output files include:
@@ -454,4 +516,4 @@ Generated output files include:
 
 ## 📄 License
 
-Licensed under the [MIT License](LICENSE). Copyright (c) 2026 Zhandos Mambetali.
+Licensed under the [Apache License 2.0](LICENSE). Copyright (c) 2026 Zhandos Mambetali.
