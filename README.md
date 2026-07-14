@@ -305,6 +305,89 @@ Exports a `TableModel` directly to a vector **PDF** file using `ReportLab`. Tran
 
 ---
 
+## 🗂️ Multi-Table Rendering (v1.1.0+)
+
+TenTags supports assembling and rendering multiple independent tables into a single output file (HTML Grid, Multi-Sheet or Stacked Excel workbook, or Multi-Page PDF report). This is highly useful for generating comprehensive reports where you want to reuse preambles and styling templates across different datasets.
+
+Each table is defined as a dictionary containing its components:
+```python
+table_definition = {
+    "preamble": "3, 4, 1, #1977ff, solid-1",  # Optional: table structure & borders template
+    "style": "style(<bg=white><center>...</center></bg>)",  # Optional: styling layout template
+    "data": "data(Item, Qty; Wood, 10; Metal, 5)", # Required: table content
+    "title": "Materials Summary",              # Optional: display title for PDF and stacked Excel
+    "sheet_name": "Materials"                  # Optional: Worksheet name for Excel sheets mode
+}
+```
+
+### Example: Assembling a Multi-Table Report
+
+```python
+import tentags
+
+# Define reusable templates
+common_preamble = '3, 4, 1, #1977ff, solid-1, 1'
+common_style = 'style(<bg=white><center><b><cm>Report Section, , , </cm></b></center></bg>; <center><bg=white> , , , </bg></center>)'
+
+# Define distinct datasets
+data_materials = 'data(Item, Qty, Price, Total; Wood, 10, 150, 1500; Metal, 5, 300, 1500)'
+data_tools = 'data(Tool, Qty, Condition, Status; Hammer, 2, New, Active; Drill, 1, Used, Active)'
+
+# Assemble reports list
+report_tables = [
+    {
+        "preamble": common_preamble,
+        "style": common_style,
+        "data": data_materials,
+        "title": "Materials Summary Report",
+        "sheet_name": "Materials"
+    },
+    {
+        "preamble": common_preamble,
+        "style": common_style,
+        "data": data_tools,
+        "title": "Tools Inventory Report",
+        "sheet_name": "Tools"
+    }
+]
+
+# 1. Compile to a multi-page PDF document
+tentags.multitable_pdf(report_tables, "combined_report.pdf", page_size="A4", orientation="portrait", page_break_after_each=True)
+
+# 2. Export to a single Excel workbook (each table on a separate sheet)
+tentags.multitable_xlsx(report_tables, "combined_sheets.xlsx", mode="sheets")
+
+# 3. Export to a single Excel workbook (tables stacked vertically on one sheet with gaps)
+tentags.multitable_xlsx(report_tables, "combined_stacked.xlsx", mode="stacked", gap=3)
+
+# 4. Generate an HTML 2-column Grid layout
+html_grid = tentags.multitable_html(report_tables, layout="grid", cols=2, gap="30px")
+```
+
+### Multi-Table API Reference
+
+### `tentags.multitable_html(tables: list, layout: str = "vertical", cols: int = 1, gap: str = "24px", full_page: bool = False, context: dict = None) -> str`
+Assembles and renders multiple tables into a single HTML container string.
+- **`layout`**: `'vertical'` (stacked) or `'grid'` (using CSS Grid).
+- **`cols`**: Number of columns in CSS Grid (only applicable when `layout='grid'`).
+- **`gap`**: CSS spacing between tables (e.g., `'20px'`, `'1.5rem'`).
+- **`full_page`**: If `True`, wraps the output in a complete HTML document with `<html>` and `<body>` tags.
+
+### `tentags.multitable_xlsx(tables: list, filepath_or_stream, mode: str = "sheets", gap: int = 3, show_titles: bool = True, context: dict = None) -> None`
+Assembles and renders multiple tables into a single Excel `.xlsx` workbook.
+- **`mode`**: `'sheets'` (creates a separate Worksheet for each table) or `'stacked'` (renders all tables vertically on a single sheet).
+- **`gap`**: Number of empty rows between stacked tables (only applicable when `mode='stacked'`).
+- **`show_titles`**: If `True`, renders the optional table `title` in bold above each table (only applicable when `mode='stacked'`).
+
+### `tentags.multitable_pdf(tables: list, filepath_or_stream, page_size: str = "letter", orientation: str = "portrait", page_break_after_each: bool = True, margins: tuple = (36, 36, 36, 36), context: dict = None) -> None`
+Assembles and renders multiple tables into a single PDF document.
+- **`page_size`**: `'letter'` or `'A4'`.
+- **`orientation`**: `'portrait'` or `'landscape'`.
+- **`page_break_after_each`**: If `True`, places a page break after each table so they start on a fresh page.
+- **`margins`**: Page margins tuple `(left, right, top, bottom)` in points (default: `(36, 36, 36, 36)`).
+
+---
+
 ## 🧪 Running Tests
 
 To run the standalone test suite and generate sample visual outputs:
