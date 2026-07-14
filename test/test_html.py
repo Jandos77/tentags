@@ -60,6 +60,26 @@ def test_html_styling_tags():
     assert "background-color:#eeeeee;" in html
     assert ">Gray</td>" in html
 
+def test_html_underline_and_strikethrough():
+    # Test <u> underline and <s> strikethrough tags
+    expr = '1,2,1,"#000","solid",0,40, data(<u>Underlined</u>, <s>Struck</s>)'
+    html = tentags.render(expr)
+    
+    assert "text-decoration:underline;" in html
+    assert ">Underlined</td>" in html
+    
+    assert "text-decoration:line-through;" in html
+    assert ">Struck</td>" in html
+
+def test_html_combined_decorations():
+    # Test combining <u> and <s> on the same cell
+    expr = '1,1,1,"#000","solid",0,40, data(<u><s>Both</s></u>)'
+    html = tentags.render(expr)
+    
+    assert "underline" in html
+    assert "line-through" in html
+    assert ">Both</td>" in html
+
 def test_html_alignment_and_font_size():
     # Test <fs=XX>, <left>, <center>, <right> tags
     expr = '1,3,1,"#000","solid",0,40, data(<fs=16><left>Left 16</left></fs>, <center>Center</center>, <right>Right</right>)'

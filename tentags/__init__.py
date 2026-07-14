@@ -416,6 +416,16 @@ def _parse_data_arg(content: str, context: dict = None):
                 cell.styles['font-weight'] = 'bold'
             elif tag_lower == 'i':
                 cell.styles['font-style'] = 'italic'
+            elif tag_lower == 'u':
+                decorations = cell.styles.get('text-decoration', '').split()
+                if 'underline' not in decorations:
+                    decorations.append('underline')
+                cell.styles['text-decoration'] = ' '.join(decorations).strip()
+            elif tag_lower == 's':
+                decorations = cell.styles.get('text-decoration', '').split()
+                if 'line-through' not in decorations:
+                    decorations.append('line-through')
+                cell.styles['text-decoration'] = ' '.join(decorations).strip()
             elif tag_lower == 'color':
                 if active_tok.attr:
                     cell.styles['color'] = active_tok.attr
@@ -865,12 +875,18 @@ def _write_model_to_sheet(model: TableModel, ws, start_row: int = 1):
                 if num_match:
                     font_size = int(num_match.group(0))
                 
-            if is_bold or is_italic or font_color or font_size:
+            decorations = cell_styles.get('text-decoration', '').split()
+            is_underline = 'underline' in decorations
+            is_strike = 'line-through' in decorations
+                
+            if is_bold or is_italic or font_color or font_size or is_underline or is_strike:
                 cell_ref.font = Font(
                     bold=is_bold, 
                     italic=is_italic, 
                     color=font_color,
-                    size=font_size
+                    size=font_size,
+                    underline="single" if is_underline else None,
+                    strike=is_strike
                 )
                 
             # Apply background color
@@ -1069,6 +1085,9 @@ def _create_pdf_table_object(model: TableModel):
             is_bold = cell_styles.get('font-weight') == 'bold'
             is_italic = cell_styles.get('font-style') == 'italic'
             font_color = hex_to_rl_color(cell_styles.get('color', ''), default=colors.black)
+            decorations_pdf = cell_styles.get('text-decoration', '').split()
+            is_underline = 'underline' in decorations_pdf
+            is_strike = 'line-through' in decorations_pdf
             
             font_size = 11
             if 'font-size' in cell_styles:
@@ -1087,6 +1106,10 @@ def _create_pdf_table_object(model: TableModel):
             table_styles.append(('FONTNAME', (c, r), (c, r), font_name))
             table_styles.append(('FONTSIZE', (c, r), (c, r), font_size))
             table_styles.append(('TEXTCOLOR', (c, r), (c, r), font_color))
+            if is_underline:
+                table_styles.append(('UNDERLINE', (c, r), (c, r)))
+            if is_strike:
+                table_styles.append(('STRIKETHROUGH', (c, r), (c, r)))
 
             if val != '':
                 rl_align = 1 # center
@@ -1103,7 +1126,12 @@ def _create_pdf_table_object(model: TableModel):
                     textColor=font_color,
                     alignment=rl_align
                 )
-                row_data.append(Paragraph(str(val), p_style))
+                cell_text = str(val)
+                if is_underline:
+                    cell_text = f'<u>{cell_text}</u>'
+                if is_strike:
+                    cell_text = f'<strike>{cell_text}</strike>'
+                row_data.append(Paragraph(cell_text, p_style))
             else:
                 row_data.append("")
         data_matrix.append(row_data)
