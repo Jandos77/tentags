@@ -7,6 +7,9 @@ try:
     # Configure minimal settings for Django rendering tests
     if not settings.configured:
         settings.configure(
+            INSTALLED_APPS=[
+                'tentags',  # enables {% load tentags %} via templatetags auto-discovery
+            ],
             TEMPLATES=[
                 {
                     'BACKEND': 'django.template.backends.django.DjangoTemplates',
