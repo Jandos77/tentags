@@ -287,8 +287,8 @@ tentags.render_pdf(model, "Enterprise_Budget_Matrix.pdf")
 ## 🛠️ API Reference
 
 ### Module Constants & Metadata
-- **`tentags.__version__`**: Library version string (e.g., `'2.0.0'`).
-- **`tentags.version_info`**: Version tuple for checking compatibility (e.g., `(2, 0, 0)`).
+- **`tentags.__version__`**: Library version string (e.g., `'2.0.2'`).
+- **`tentags.version_info`**: Version tuple for checking compatibility (e.g., `(2, 0, 2)`).
 - **`tentags.__author__`**: Author name (`'Zhandos Mambetali'`).
 - **`tentags.__license__`**: Project license (`'Apache-2.0'`).
 - **`tentags.__homepage__`**: Link to home website (`'https://tentags.org'`).
@@ -301,7 +301,7 @@ tentags.render_pdf(model, "Enterprise_Budget_Matrix.pdf")
 Prints runtime system information and status of optional render backends to the console.
 Example output:
 ```text
-TenTags 2.0.0
+TenTags 2.0.2
 Python 3.14.0
 License: Apache-2.0
 Website: https://tentags.org
@@ -464,6 +464,21 @@ data(
 TenTags provides a Jinja2 Extension (`TenTagsExtension`) and global helper function (`tentags`).
 
 #### FastAPI Integration
+
+FastAPI templates require `fastapi` and `jinja2`; use `uvicorn[standard]` to run the
+application. The included test application can be set up with:
+
+```bash
+pip install -r fastapi/requirements.txt
+```
+
+Its dependencies are:
+
+- `fastapi` - web framework.
+- `jinja2` - template engine used by `Jinja2Templates`.
+- `uvicorn[standard]` - ASGI server for local development.
+- `httpx2` - only required for the FastAPI HTTP test client.
+
 ```python
 from fastapi.templating import Jinja2Templates
 from tentags.contrib.fastapi import register_templates

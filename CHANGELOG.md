@@ -6,21 +6,32 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [2.0.1] - 2026-07-15
+## [2.0.2] - 2026-07-15
+
+### Fixed
+- Synchronized Django template tag tests with direct script execution.
+- Added metadata checks that validate package version consistency before publishing.
+
+---
+
+## [2.0.1] - yanked
 
 ### Fixed
 - `NameError: name 'Union' is not defined` on **Python 3.13+** at import time.  
   The `render_pdf()` signature used bare `Union[str, Any]` instead of the module-aliased
   `_Union[str, _Any]`. Fixed to be consistent with all other type annotations in the file.
 
+> **Removed from PyPI** due to a defect discovered after publication.
+> Use **2.0.2** instead.
+
 ---
 
 ## [2.0.0] - yanked
 
 > **Removed from PyPI** due to `NameError: Union is not defined` on Python 3.13+ at import.  
-> Use **2.0.1** instead.
+> Use **2.0.2** instead.
 
-### Added (carried into 2.0.1)
+### Added (carried into 2.0.2)
 - `<u>` tag — underline text (HTML inline CSS, XLSX `Font(underline="single")`, PDF `UNDERLINE`)
 - `<s>` tag — strikethrough text (HTML inline CSS, XLSX `Font(strike=True)`, PDF `STRIKETHROUGH`)
 - `<url=https://...>` tag — clickable hyperlink (HTML `<a>`, XLSX native hyperlink, PDF `<link>`)
@@ -39,6 +50,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [1.1.4] - yanked
 
 > **Removed from PyPI** — contained the same `NameError: Union is not defined` bug on Python 3.13+.
+> Use **2.0.2** instead.
 
 ---
 

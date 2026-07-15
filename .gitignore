@@ -54,4 +54,4 @@ venv.bak/
 *.pdf
 test_output.html
 django_project/
-
+fastapi/

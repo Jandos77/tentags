@@ -1,7 +1,45 @@
 import tentags
+from pathlib import Path
+import re
+
+try:
+    import tomllib
+except ModuleNotFoundError:
+    tomllib = None
+
+
+def load_pyproject():
+    pyproject_path = Path(__file__).resolve().parents[1] / "pyproject.toml"
+    if tomllib is not None:
+        with pyproject_path.open("rb") as f:
+            return tomllib.load(f)
+
+    pyproject = {"project": {}}
+    section = None
+    for raw_line in pyproject_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if line.startswith("[") and line.endswith("]"):
+            section = line.strip("[]")
+            continue
+        if "=" in line:
+            key, value = line.split("=", 1)
+            key = key.strip()
+            value = value.strip()
+            if section == "project":
+                if value.startswith("["):
+                    pyproject["project"][key] = [
+                        item.strip().strip('"')
+                        for item in value.strip("[]").split(",")
+                        if item.strip()
+                    ]
+                else:
+                    pyproject["project"][key] = value.strip('"')
+    return pyproject
+
 
 def test_metadata_features():
     print("=== Testing Metadata and Helper API ===")
+    pyproject = load_pyproject()
     
     # 1. Check meta constants
     print(f"Version: {tentags.__version__}")
@@ -13,9 +51,11 @@ def test_metadata_features():
     print(f"Copyright: {tentags.__copyright__}")
     print(f"URL: {tentags.__url__}")
     
-    assert tentags.__version__ == "2.0.1"
-    assert tentags.version_info == (2, 0, 1)
-    assert tentags.__license__ == "Apache-2.0"
+    project_version = pyproject["project"]["version"]
+    assert re.fullmatch(r"\d+\.\d+\.\d+", project_version)
+    assert tentags.__version__ == project_version
+    assert tentags.version_info == tuple(int(part) for part in project_version.split("."))
+    assert tentags.__license__ == pyproject["project"]["license"]
     assert tentags.__copyright__ == "Copyright (c) 2026 Zhandos Mambetali"
     assert tentags.__url__ == "https://tentags.org"
     
