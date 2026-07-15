@@ -31,7 +31,7 @@ ROWS, COLS, BORDER_WIDTH, "BORDER_COLOR", "BORDER_STYLE", STRETCH, CELL_HEIGHT, 
 | `COLS` | int | Number of columns |
 | `BORDER_WIDTH` | int | Border thickness (px) |
 | `BORDER_COLOR` | string | Border color (`"black"`, `"#ccc"`) |
-| `BORDER_STYLE` | string | Border style (`"solid"`, `"solid-1"`, `"none"`) |
+| `BORDER_STYLE` | string | Border style (`"solid"`, `"solid-1"`, `"solid-0"`) |
 | `STRETCH` | int | `0` = fixed height, `1` = auto-stretch |
 | `CELL_HEIGHT` | int | Cell height in px |
 | `data(...)` | block | Cell contents |
@@ -120,8 +120,8 @@ tentags.render('1,3,1,"black","solid",0,40, data(<left>Left</left>, <center>Cent
 
 | Tag | Description |
 |---|---|
-| `<cm>text, , </cm>` | Colspan: merge N columns (one `,` per extra cell) |
-| `<rm>text</rm>` | Rowspan: merge cells vertically |
+| `<cm>text, , </cm>` | Joins N columns (one `,` per extra cell). HTML hides internal borders; Excel and PDF create native merged regions. |
+| `<rm>text</rm>` | Joins cells vertically. Mark each participating cell with `<rm>`. |
 
 ```python
 # Merge 3 columns
@@ -208,14 +208,18 @@ tentags.render_pdf(model,  'out.pdf')       # PDF file
 ```python
 import tentags
 
-preamble = '2, 3, 1, "#ccc", "solid", 0, 40'
-style    = 'style(<bg=#1e293b><color=white><b><cm>Title, , </cm></b></color></bg>; <left></left>, <center></center>, <right></right>)'
-data     = 'data(Department, Employees, Budget; Engineering, 12, "$500,000")'
+preamble = '3, 3, 1, "#ccc", "solid", 0, 40'
+style    = '''style(
+    <bg=#1e293b><color=white><b><cm> , , </cm></b></color></bg>;
+    <bg=#f1f5f9><b><left></left></b></bg>, <bg=#f1f5f9><b><center></center></b></bg>, <bg=#f1f5f9><b><right></right></b></bg>;
+    <left></left>, <center></center>, <right></right>
+)'''
+data     = 'data(Department Report, , ; Department, Employees, Budget; Engineering, 12, "$500,000")'
 
 html  = tentags.render(preamble, style, data)
 
 # Same style template, different data
-html2 = tentags.render(preamble, style, 'data(Marketing, 8, "$200,000")')
+html2 = tentags.render(preamble, style, 'data(Department Report, , ; Department, Employees, Budget; Marketing, 8, "$200,000")')
 ```
 
 ---
@@ -254,16 +258,18 @@ def report_view(request):
 {% load tentags %}
 
 {% tt %}
-4, 4, 1, "#cbd5e1", "solid", 0, 45,
+3, 4, 1, "#cbd5e1", "solid", 0, 45,
 style(
-    <fs=18><bg=#1e293b><color=white><b><cm>Financial Report, , , </cm></b></color></bg></fs>;
-    <bg=#f1f5f9><b><left>Department</left></b></bg>,
-    <bg=#f1f5f9><b><center>Revenue</center></b></bg>,
-    <bg=#f1f5f9><b><center>Expenses</center></b></bg>,
-    <bg=#f1f5f9><b><center>Net Profit</center></b></bg>
+    <fs=18><bg=#1e293b><color=white><b><cm> , , , </cm></b></color></bg></fs>;
+    <bg=#f1f5f9><b><left></left></b></bg>,
+    <bg=#f1f5f9><b><center></center></b></bg>,
+    <bg=#f1f5f9><b><center></center></b></bg>,
+    <bg=#f1f5f9><b><right></right></b></bg>;
+    <left></left>, <right></right>, <right></right>, <right></right>
 ),
 data(
-    , , , ;
+    Financial Report, , , ;
+    Department, Revenue, Expenses, Net Profit;
     {{ dept }}, {{ revenue }}, {{ expenses }},
     <bg=#dcfce7><color=#166534><b><right>{{ profit }}</right></b></color></bg>
 )
@@ -391,7 +397,7 @@ style(
     <bg=#0f172a><color=white><b><center>Stock</center></b></color></bg>
 ),
 data(
-    , , ;
+    Product, Price, Stock;
     {% for p in items %}
     <left>{{ p.name }}</left>,
     <center>{{ p.price }}</center>,
@@ -429,7 +435,7 @@ def user_profile(username):
 {{ tentags(preamble, style_block, data_block) }}
 
 {# Or inline in the template #}
-{{ tentags('1,1,1,"black","solid",0,40, data(Welcome, ' ~ username ~ ')') }}
+{{ tentags('1,1,1,"black","solid",0,40, data(Welcome ' ~ username ~ ')') }}
 ```
 
 ---
@@ -570,12 +576,10 @@ data()   → actual cell content (text, numbers, links)
 ```python
 import tentags
 
-preamble = '3, 3, 1, "#cbd5e1", "solid", 0, 45'
+preamble = '2, 3, 1, "#cbd5e1", "solid", 0, 45'
 style = '''style(
-    <bg=#0f172a><color=white><b><cm>Report, , </cm></b></color></bg>;
-    <bg=#f8fafc><b><left></left></b></bg>,
-    <bg=#f8fafc><b><center></center></b></bg>,
-    <bg=#f8fafc><b><right></right></b></bg>
+    <bg=#0f172a><color=white><b><cm> , , </cm></b></color></bg>;
+    <left></left>, <center></center>, <right></right>
 )'''
 
 html_jan = tentags.render(preamble, style, 'data(January, , ; Sales, 1200, "$36,000")')
@@ -641,14 +645,15 @@ import tentags
 
 preamble = '5, 4, 1, "#e2e8f0", "solid", 0, 45'
 style = '''style(
-    <fs=18><bg=#1e293b><color=white><b><cm>Q3 Financial Dashboard, , , </cm></b></color></bg></fs>;
-    <bg=#f1f5f9><b><left>Department</left></b></bg>,
-    <bg=#f1f5f9><b><center>Revenue</center></b></bg>,
-    <bg=#f1f5f9><b><center>Expenses</center></b></bg>,
-    <bg=#f1f5f9><b><center>Net Profit</center></b></bg>
+    <fs=18><bg=#1e293b><color=white><b><cm> , , , </cm></b></color></bg></fs>;
+    <bg=#f1f5f9><b><left></left></b></bg>,
+    <bg=#f1f5f9><b><center></center></b></bg>,
+    <bg=#f1f5f9><b><center></center></b></bg>,
+    <bg=#f1f5f9><b><right></right></b></bg>
 )'''
 data = '''data(
-    , , , ;
+    Q3 Financial Dashboard, , , ;
+    Department, Revenue, Expenses, Net Profit;
     <left>Engineering</left>, <right>"$240,000"</right>, <right>"$180,000"</right>,
         <bg=#dcfce7><color=#166534><b><right>"+$60,000"</right></b></color></bg>;
     <left>Sales & Marketing</left>, <right>"$310,000"</right>, <right>"$210,000"</right>,
@@ -670,8 +675,12 @@ tentags.render_pdf(model,  'dashboard.pdf')
 ```python
 import tentags
 
-preamble = '4, 3, 1, "#e2e8f0", "solid", 0, 45'
-style    = 'style(<b><left></left></b>, <center></center>, <right></right>)'
+preamble = '3, 3, 1, "#e2e8f0", "solid", 0, 45'
+style    = '''style(
+    <b><left></left></b>, <center></center>, <right></right>;
+    <b><left></left></b>, <center></center>, <right></right>;
+    <b><left></left></b>, <center></center>, <right></right>
+)'''
 
 entries = [
     ('<url=https://github.com/tentags>GitHub Repository</url>', 'Open Source', '<color=green>Active</color>'),
@@ -710,7 +719,7 @@ style = '''style(
         <bg=#3b82f6><color=white><b><center>Rate</center></b></color></bg>,
         <bg=#3b82f6><color=white><b><right>Total</right></b></color></bg>
 )'''
-data = f'data(, , , ; , , , ; {rows_str})'
+data = f'data(INVOICE #1024, , , ; Date: 2026-07-15, , , ; Description, Qty, Rate, Total; {rows_str})'
 
 model = tentags.compile(preamble, style, data)
 tentags.render_xlsx(model, 'invoice.xlsx')
@@ -742,9 +751,9 @@ async def sales_report(request: Request, db: Session = Depends(get_db)):
             f'<bg={bg}><color={color}><b><right>${row.total:,.0f}</right></b></color></bg>'
         )
 
-    data       = 'data(' + header + '; ' + '; '.join(data_rows) + ')'
-    preamble   = f'{len(rows_db) + 1}, 3, 1, "#e2e8f0", "solid", 0, 45'
-    html_table = tentags.render(preamble, data=data)
+    data = 'data(' + header + '; ' + '; '.join(data_rows) + ')'
+    preamble = f'{len(rows_db) + 1}, 3, 1, "#e2e8f0", "solid", 0, 45'
+    html_table = tentags.render(f'{preamble}, {data}')
 
     return templates.TemplateResponse('sales.html', {
         'request': request,
@@ -769,7 +778,7 @@ async def sales_report(request: Request, db: Session = Depends(get_db)):
 | Font size | `<fs=N>` | Font size in px |
 | Color | `<color=...>`, `<bg=...>` | Text color / cell background |
 | Alignment | `<left>`, `<center>`, `<right>` | Horizontal text alignment |
-| Merging | `<cm>`, `<rm>` | Colspan / Rowspan |
+| Merging | `<cm>`, `<rm>` | Horizontal / vertical cell joining |
 | Link | `<url=https://...>` | Clickable hyperlink |
 | Data | `csv("path")` | Inline CSV import |
 
@@ -777,11 +786,11 @@ async def sales_report(request: Request, db: Session = Depends(get_db)):
 
 | Tag | Recommended in |
 |---|---|
-| `<b>`, `<i>`, `<u>`, `<s>`, `<color>`, `<bg>`, `<fs>`, `<left>`, `<center>`, `<right>`, `<cm>`, `<rm>` | `style()` — formatting template |
+| `<b>`, `<i>`, `<u>`, `<s>`, `<color>`, `<bg>`, `<fs>`, `<left>`, `<center>`, `<right>`, `<cm>`, `<rm>` | `style()` or `data()` — use `style()` for reusable presentation |
 | `<url=...>` | `data()` — unique per row |
 | `{{ variable }}` (Django / Jinja2) | `data()` — dynamic content from backend |
 
-### Block order — always
+### Decoupled block order
 
 ```
 preamble  →  style()  →  data()

@@ -83,7 +83,7 @@ body_rows = ";\n".join(
     for e in employees
 )
 
-# 4. Construct complete formula with global Preamble (rows, cols, borders, row_height)
+# 4. Construct a complete formula with the preamble (rows, columns, borders, stretch, row height)
 formula = f'''
 {len(employees) + 1},3,1,"#cbd5e1","solid",0,40, data(
     {header};
@@ -100,16 +100,7 @@ tentags.render_xlsx(model, "Quarter_Report.xlsx")
 tentags.render_pdf(model, "Quarter_Report.pdf")
 ```
 
-**↓ Faithful Visual Output across HTML, Excel (`.xlsx`) and PDF (`.pdf`):**
-
-<p align="center">
-  <img src="https://tentags.org/assets/img/Quarter_Report.png" alt="TenTags Quarter Report Output" width="600">
-</p>
-
-| Quarter Report *(Merged across 2 columns (`<cm>`), 16px Bold White text, Dark Slate `#1e293b` fill)* | — |
-| :--- | :---: |
-| **Sales** *(Bold)* | $120,000 *(Right aligned)* |
-| **Marketing** *(Bold)* | $80,000 *(Right aligned)* |
+The same parsed model can be rendered as HTML, Excel (`.xlsx`), or PDF.
 
 ---
 
@@ -134,7 +125,7 @@ During compilation, the engine overlays the layout and formatting rules defined 
 | :---: | :--- | :--- | :--- |
 | **1** | `rows` | `int` | The total number of rows in the table grid. |
 | **2** | `cols` | `int` | The total number of columns in the table grid. |
-| **3** | `border_width` | `int` / `float` | The width of the grid lines in pixels. |
+| **3** | `border_width` | `int` | The width of the grid lines in pixels. |
 | **4** | `border_color` | `str` | HEX color string (e.g. `"#cbd5e1"`, `#1977ff`) or CSS name (e.g. `green`, `blue`). Can be written with or without quotes. |
 | **5** | `border_style` | `str` | Style of the grid lines (`solid`, `dashed`, or `dotted`). Suffix `-1` (e.g. `solid-1`) enables inner grid borders. Suffix `-0` (e.g. `dashed-0`) hides both outer and inner borders (borderless). Default (no suffix) draws only the outer border. Can be written with or without quotes. |
 | **6** | `stretch` | `int` | Auto-stretching behavior. `0` maintains fixed cell heights, `1` stretches the grid. |
@@ -144,9 +135,9 @@ Following these preamble parameters, the formula is completed by either the `dat
 
 ---
 
-## 🏷️ The 10 Tags in `data(...)`
+## 🏷️ Tags in `style(...)` and `data(...)`
 
-TenTags derives its name from the **10 core structural and styling tags** supported inside the `data(...)` argument block:
+TenTags derives its name from the **10 core structural and styling tags** supported inside `style(...)` and `data(...)` blocks:
 
 | # | Tag / Syntax | Type | Description | Example |
 |---|---|---|---|---|
@@ -158,10 +149,18 @@ TenTags derives its name from the **10 core structural and styling tags** suppor
 | 6 | `<right>` | Alignment | Aligns cell content to the **right** (`text-align: right`). | `data(<right>Right aligned $5,000)` |
 | 7 | `<color=...>` | Text Color | Sets custom HEX or CSS text color (`color: ...` / font color). | `data(<color=#ef4444>Error</color>, OK)` |
 | 8 | `<bg=...>` | Background Fill | Sets cell background fill color (`background-color: ...` / PatternFill). | `data(<bg=#f8fafc>Summary</bg>, $500)` |
-| 9 | `<cm>...</cm>` | Column Merge | Merges the cell rightward with adjacent columns (`colspan`). | `data(<cm>Merged Title, ,</cm>; A, B)` |
-| 10 | `<rm>...</rm>` | Row Merge | Merges the cell downward with rows below it (`rowspan`). | `data(<rm>Date</rm>, Job; , Engineer)` |
+| 9 | `<cm>...</cm>` | Column Merge | Joins adjacent cells horizontally. HTML suppresses the internal border; Excel and PDF create native merged regions. | `data(<cm>Merged Title, ,</cm>; A, B)` |
+| 10 | `<rm>...</rm>` | Row Merge | Joins cells vertically. Mark each participating cell with `<rm>`. | `data(<rm>Date</rm>, Job; <rm> </rm>, Engineer)` |
 
 > **Note on Tag Transfer & Empty Elements**: Notice how empty elements (such as `, ,` or `, ;`) are used when adjacent cells are absorbed by a `<cm>` horizontal merge or `<rm>` vertical merge. TenTags automatically transfers and preserves all active tags across cell boundaries without requiring explicit `None` placeholders.
+
+Additional supported tags:
+
+| Tag / Syntax | Description | Example |
+|---|---|---|
+| `<u>...</u>` | Underlines text. | `data(<u>Underlined</u>)` |
+| `<s>...</s>` | Strikes through text. | `data(<s>Cancelled</s>)` |
+| `<url=...>...</url>` | Creates a hyperlink. | `data(<url=https://example.com>Open site</url>)` |
 
 ---
 
@@ -264,24 +263,6 @@ tentags.render_pdf(model, "Enterprise_Budget_Matrix.pdf")
   <img src="https://tentags.org/assets/img/example.png" alt="TenTags Excel Matrix Output" width="750">
 </p>
 
-
-| # | Tag / Syntax | Type | Description | Example |
-|---|---|---|---|---|
-| 1 | `<fs=...>` | Typography | Sets custom font size (`font-size` in HTML, `size` in Excel `openpyxl`). | `data(<fs=16>Heading</fs>, Text)` |
-| 2 | `<b>...</b>` | Typography | Renders cell text in **Bold** font weight (`font-weight: bold`). | `data(<b>Total</b>, 100)` |
-| 3 | `<i>...</i>` | Typography | Renders cell text in *Italic* font style (`font-style: italic`). | `data(<i>Pending</i>, Done)` |
-| 4 | `<left>` | Alignment | Aligns cell content to the **left** (`text-align: left`). | `data(<left>Left aligned text)` |
-| 5 | `<center>` | Alignment | Aligns cell content to the **center** (`text-align: center`). | `data(<center>Centered text)` |
-| 6 | `<right>` | Alignment | Aligns cell content to the **right** (`text-align: right`). | `data(<right>Right aligned $5,000)` |
-| 7 | `<color=...>` | Text Color | Sets custom HEX or CSS text color (`color: ...` / font color). | `data(<color=#ef4444>Error</color>, OK)` |
-| 8 | `<bg=...>` | Background Fill | Sets cell background fill color (`background-color: ...` / PatternFill). | `data(<bg=#f8fafc>Summary</bg>, $500)` |
-| 9 | `<cm>...</cm>` | Column Merge | Merges the cell rightward with adjacent columns (`colspan`). | `data(<cm>Merged Title</cm>, None; A, B)` |
-| 10 | `<rm>...</rm>` | Row Merge | Merges the cell downward with rows below it (`rowspan`). | `data(<rm>Date</rm>, Job; <cm>, Engineer)` |
-
-> **Note on Tag Transfer**: When merging (`<cm>`, `<rm>`) or expanding ranges across styled cells (`<fs>`, `<b>`, `<i>`, `<color>`, `<bg>`, `<left>`, `<center>`, `<right>`), TenTags automatically transfers and preserves all formatting across cell boundaries in both HTML and Excel outputs.
-> 
-> **Dynamic Data Expressions**: In addition to the 10 markup tags above, TenTags `data(...)` supports dynamic line numbering (`#`), variable context substitution (`VarName`), CSV URL/file import (`csv(...)`), and cell range expansion (`A1:B3`).
-
 ---
 
 ## 🛠️ API Reference
@@ -298,14 +279,7 @@ tentags.render_pdf(model, "Enterprise_Budget_Matrix.pdf")
 ### Diagnostic & Utility Helpers
 
 #### `tentags.info() -> None`
-Prints runtime system information and status of optional render backends to the console.
-Example output:
-```text
-TenTags 2.0.2
-Python 3.14.0
-License: Apache-2.0
-Website: https://tentags.org
-```
+Prints the package version, author, license, website, Python version, and availability of the HTML, PDF, and XLSX renderers.
 
 #### `tentags.features() -> dict`
 Checks the availability of optional rendering backends. Returns a dictionary:
@@ -323,7 +297,7 @@ Syntactically checks a TenTags formula's layout configuration and markup tag bal
 - Failure: `{"status": "error", "message": "Missing closing tag </b>..."}`
 
 #### `tentags.demo(name: str = "dashboard") -> None`
-Generates out-of-the-box demo rendering outputs in current directory. 
+Generates an HTML demo in the current directory and XLSX/PDF files when the corresponding optional backends are installed.
 Supported templates: `'dashboard'`, `'invoice'`, `'table'`. Example:
 ```python
 import tentags
@@ -332,21 +306,26 @@ tentags.demo("invoice") # Generates HTML, XLSX, and PDF invoices on the fly
 
 ### Core API Functions
 
-### `tentags.render(formula: str, context: dict = None) -> str`
-Parses the input DSL formula string and returns a complete `<table>...</table>` HTML string.
-- **`formula`**: String in format `'rows, cols, border_width, "border_color", "border_style", margin, row_height, data(...)'`.
+### `tentags.render(preamble_or_formula, style=None, data=None, context=None) -> str`
+Renders either a complete formula or decoupled preamble, style, and data blocks to a `<table>...</table>` HTML string.
+- **`preamble_or_formula`**: A complete formula such as `'rows, cols, border_width, "border_color", "border_style", stretch, cell_height, data(...)'`, or a preamble used with `style` and `data`.
+- **`style`**: Optional `style(...)` block for decoupled rendering.
+- **`data`**: Optional `data(...)` block for decoupled rendering.
 - **`context`**: Optional dictionary of variable names and their replacement values (`{'VarName': 'Value'}`).
 
 ### `tentags.parse(formula: str, context: dict = None) -> TableModel`
 Parses the formula into a structured `TableModel` instance containing 2D cell grids (`CellDesc`), `BorderFlags`, and styles without generating HTML.
 
+### `tentags.compile(preamble, style, data, context: dict = None) -> TableModel`
+Builds a `TableModel` from decoupled preamble, style, and data blocks. Each block may be a TenTags string or a parsed cell grid.
+
 ### `tentags.render_html(model: TableModel) -> str`
 Renders a previously parsed `TableModel` instance into an HTML string.
 
-### `tentags.render_xlsx(model: TableModel, output_filename: str) -> None`
+### `tentags.render_xlsx(model: TableModel, filepath_or_stream) -> None`
 Exports a `TableModel` directly to an Excel `.xlsx` file using `openpyxl`. Applies `openpyxl.styles.Font` (bold, italic, color), `openpyxl.styles.PatternFill` (background color), and `openpyxl.styles.Border` according to the table formula. Requires `pip install tentags[excel]`.
 
-### `tentags.render_pdf(model: TableModel, output_filename: str) -> None`
+### `tentags.render_pdf(model: TableModel, filepath_or_stream) -> None`
 Exports a `TableModel` directly to a vector **PDF** file using `ReportLab`. Translates IR coordinates, merged cell regions (`SPAN`), background fills (`BACKGROUND`), fonts, alignments, and border grids into native `ReportLab` `TableStyle` commands. Automatically selects portrait or landscape page orientation based on column count. Requires `pip install tentags[pdf]`.
 
 ---
@@ -358,7 +337,7 @@ TenTags supports assembling and rendering multiple independent tables into a sin
 Each table is defined as a dictionary containing its components:
 ```python
 table_definition = {
-    "preamble": "3, 4, 1, #1977ff, solid-1",  # Optional: table structure & borders template
+    "preamble": "3, 4, 1, #1977ff, solid-1, 0, 40",  # Optional: table structure and borders
     "style": "style(<bg=white><center>...</center></bg>)",  # Optional: styling layout template
     "data": "data(Item, Qty; Wood, 10; Metal, 5)", # Required: table content
     "title": "Materials Summary",              # Optional: display title for PDF and stacked Excel
@@ -372,12 +351,17 @@ table_definition = {
 import tentags
 
 # Define reusable templates
-common_preamble = '3, 4, 1, #1977ff, solid-1, 1'
-common_style = 'style(<bg=white><center><b><cm>Report Section, , , </cm></b></center></bg>; <center><bg=white> , , , </bg></center>)'
+common_preamble = '4, 4, 1, #1977ff, solid-1, 0, 40'
+common_style = '''style(
+    <bg=#1e293b><color=white><b><cm> , , , </cm></b></color></bg>;
+    <bg=#e2e8f0><b><left></left></b></bg>, <bg=#e2e8f0><b><center></center></b></bg>, <bg=#e2e8f0><b><right></right></b></bg>, <bg=#e2e8f0><b><right></right></b></bg>;
+    <left></left>, <center></center>, <right></right>, <right></right>;
+    <left></left>, <center></center>, <right></right>, <right></right>
+)'''
 
 # Define distinct datasets
-data_materials = 'data(Item, Qty, Price, Total; Wood, 10, 150, 1500; Metal, 5, 300, 1500)'
-data_tools = 'data(Tool, Qty, Condition, Status; Hammer, 2, New, Active; Drill, 1, Used, Active)'
+data_materials = 'data(Materials Report, , , ; Item, Qty, Price, Total; Wood, 10, 150, 1500; Metal, 5, 300, 1500)'
+data_tools = 'data(Tools Report, , , ; Tool, Qty, Condition, Status; Hammer, 2, New, Active; Drill, 1, Used, Active)'
 
 # Assemble reports list
 report_tables = [
@@ -465,19 +449,12 @@ TenTags provides a Jinja2 Extension (`TenTagsExtension`) and global helper funct
 
 #### FastAPI Integration
 
-FastAPI templates require `fastapi` and `jinja2`; use `uvicorn[standard]` to run the
-application. The included test application can be set up with:
+FastAPI integration is optional. Install FastAPI and Jinja2 in the application that uses TenTags;
+use an ASGI server such as Uvicorn to run that application:
 
 ```bash
-pip install -r fastapi/requirements.txt
+pip install fastapi jinja2 "uvicorn[standard]"
 ```
-
-Its dependencies are:
-
-- `fastapi` - web framework.
-- `jinja2` - template engine used by `Jinja2Templates`.
-- `uvicorn[standard]` - ASGI server for local development.
-- `httpx2` - only required for the FastAPI HTTP test client.
 
 ```python
 from fastapi.templating import Jinja2Templates
@@ -498,24 +475,27 @@ init_app(app)
 
 #### In your Jinja2 Templates:
 ```html
-<!-- Block Tag (supports short {% tt %} alias as well) -->
-{% tt rows=2 cols=2 border_width=3 border_color="blue" %}
-A, B;
-C, D
+<!-- Block Tag -->
+{% tt %}
+2, 2, 3, "blue", "solid", 0, 50,
+data(
+    A, B;
+    C, D
+)
 {% endtt %}
 
 <!-- Inline Function -->
-{{ tentags(formula_string) }}
+{{ tentags('2, 2, 3, "blue", "solid", 0, 50, data(A, B; C, D)') }}
 ```
 
 ---
 
 ## 🧪 Running Tests
 
-To run the standalone test suite and generate sample visual outputs:
+To run the standalone test suite:
 
 ```bash
-PYTHONPATH=. pytest
+python -m pytest
 ```
 
 Generated output files include:
