@@ -1,16 +1,3 @@
 include README.md
+include EXAMPLES.md
 include LICENSE
-include requirements.txt
-include pyproject.toml
-include test_data.csv
-include test_library.py
-include tentags_logo.png
-include example.png
-include Q3_Financial_Dashboard.png
-include Quarter_Report.png
-
-exclude *.xlsx
-exclude *.html
-recursive-exclude __pycache__ *
-recursive-exclude venv *
-recursive-exclude .pytest_cache *

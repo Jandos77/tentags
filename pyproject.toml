@@ -7,7 +7,6 @@ name = "tentags"
 version = "2.0.0"
 description = "A declarative template language and Intermediate Representation (IR) for automated HTML, Excel, and PDF table/document generation."
 readme = "README.md"
-documentation-files = ["EXAMPLES.md"]
 authors = [
     { name = "Zhandos Mambetali", email = "zhandos.mambetali@gmail.com" }
 ]
