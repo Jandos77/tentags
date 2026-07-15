@@ -59,7 +59,7 @@ Current Version: 2.0.0
 License: Apache License 2.0
 """
 
-__version__ = "2.0.1"
+__version__ = "2.0.0"
 __author__ = "Zhandos Mambetali"
 __license__ = "Apache-2.0"
 __copyright__ = "Copyright (c) 2026 Zhandos Mambetali"
