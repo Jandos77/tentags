@@ -59,7 +59,7 @@ Current Version: 2.0.0
 License: Apache License 2.0
 """
 
-__version__ = "2.0.0"
+__version__ = "2.0.1"
 __author__ = "Zhandos Mambetali"
 __license__ = "Apache-2.0"
 __copyright__ = "Copyright (c) 2026 Zhandos Mambetali"
@@ -1173,7 +1173,7 @@ def _create_pdf_table_object(model: TableModel):
 
     return Table(data_matrix, rowHeights=row_heights, style=TableStyle(table_styles))
 
-def render_pdf(model: TableModel, filepath_or_stream: Union[str, Any]) -> None:
+def render_pdf(model: TableModel, filepath_or_stream: _Union[str, _Any]) -> None:
     """
     Renders a TableModel directly to a PDF document using ReportLab.
     Translates IR coordinates, merged regions, background fills, fonts, and borders into native ReportLab TableStyles.
