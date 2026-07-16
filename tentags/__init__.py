@@ -55,17 +55,17 @@ Website: https://tentags.org
 Documentation: https://tentags.org/docs
 GitHub: https://github.com/Jandos77/tentags
 
-Current Version: 2.0.2
+Current Version: 2.0.3
 License: Apache License 2.0
 """
 
-__version__ = "2.0.2"
+__version__ = "2.0.3"
 __author__ = "Zhandos Mambetali"
 __license__ = "Apache-2.0"
 __copyright__ = "Copyright (c) 2026 Zhandos Mambetali"
 __homepage__ = "https://tentags.org"
 __url__ = "https://tentags.org"
-version_info = (2, 0, 2)
+version_info = (2, 0, 3)
 
 __all__ = [
     "__version__",
@@ -98,6 +98,7 @@ import csv as _csv
 import urllib.request as _urllib_request
 import io as _io
 import os as _os
+import html as _html
 from typing import Union as _Union, Any as _Any, Optional as _Optional, Dict as _Dict, List as _List
 from enum import Enum as _Enum, auto as _auto
 from dataclasses import dataclass as _dataclass
@@ -105,6 +106,7 @@ from dataclasses import dataclass as _dataclass
 class _TokenType(_Enum):
     TAG_OPEN = _auto()
     TAG_CLOSE = _auto()
+    TAG_SELF = _auto()
     COMMA = _auto()
     SEMICOLON = _auto()
     TEXT = _auto()
@@ -131,6 +133,7 @@ class CellDesc:
         self.rm_block_id = None
         self.border_flags = BorderFlags.NONE
         self.text_parts = []
+        self.images = []
         self.styles = {}  # Extensible styles, e.g. {'font-weight': 'bold', 'color': '#ff0000'}
 
 class TableModel:
@@ -143,6 +146,89 @@ class TableModel:
         self.border_style = border_style
         self.stretch = stretch
         self.cell_height = cell_height
+
+def _scan_open_tag(source: str):
+    tag_open_match = _re.match(r'^<([a-zA-Z_]+)(?:=([^>]+)|\s+([^>]+))?>', source)
+    if not tag_open_match:
+        return None
+    tag_name = tag_open_match.group(1)
+    tag_attr = tag_open_match.group(2) if tag_open_match.group(2) is not None else tag_open_match.group(3)
+    return tag_open_match.group(0), tag_name, tag_attr
+
+def _parse_tag_attrs(attr_str: str, line: int, column: int) -> dict:
+    attrs = {}
+    if not attr_str:
+        return attrs
+    for part in attr_str.split():
+        if '=' not in part:
+            raise ValueError(f"Invalid tag attribute '{part}' at line {line}, column {column}. Expected key=value.")
+        key, value = part.split('=', 1)
+        key = key.strip().lower()
+        value = value.strip().strip('"\'')
+        if not key or not value:
+            raise ValueError(f"Invalid tag attribute '{part}' at line {line}, column {column}. Expected key=value.")
+        attrs[key] = value
+    return attrs
+
+def _normalize_img_dimension(value: str, attr_name: str, line: int, column: int, allow_auto: bool = True) -> str:
+    value = value.strip().strip('"\'')
+    if allow_auto and value.lower() == 'auto':
+        return 'auto'
+    if _re.fullmatch(r'\d+', value):
+        return value
+    allowed = "a pixel number or auto" if allow_auto else "a pixel number"
+    raise ValueError(f"<img> attribute {attr_name}= must be {allowed} at line {line}, column {column}.")
+
+def _parse_img_attrs(attr_str: str, line: int, column: int) -> dict:
+    attrs = _parse_tag_attrs(attr_str, line, column)
+    if 'src' not in attrs:
+        raise ValueError(f"<img> requires src=... at line {line}, column {column}.")
+    if 'w' in attrs:
+        attrs['w'] = _normalize_img_dimension(attrs['w'], 'w', line, column)
+    if 'h' in attrs:
+        attrs['h'] = _normalize_img_dimension(attrs['h'], 'h', line, column)
+    if 'm' in attrs:
+        attrs['m'] = _normalize_img_dimension(attrs['m'], 'm', line, column, allow_auto=False)
+    return attrs
+
+def _render_img_html(attrs: dict, forced_height: int = None, expand_cell: bool = False) -> str:
+    src = _html.escape(str(attrs.get('src', '')), quote=True)
+    html_attrs = [f'src="{src}"']
+
+    width = attrs.get('w')
+    height = attrs.get('h')
+    if forced_height is not None:
+        width = 'auto'
+        height = str(forced_height)
+
+    style_parts = ["display:inline-block", "vertical-align:middle"]
+    if not expand_cell:
+        style_parts.insert(0, "max-width:100%")
+
+    if width and width != 'auto':
+        html_attrs.append(f'width="{_html.escape(width, quote=True)}"')
+        style_parts.append(f"width:{width}px")
+    elif height and height != 'auto':
+        style_parts.append("width:auto")
+
+    if height and height != 'auto':
+        html_attrs.append(f'height="{_html.escape(height, quote=True)}"')
+        style_parts.append(f"height:{height}px")
+    else:
+        style_parts.append("height:auto")
+
+    margin = attrs.get('m')
+    if margin and margin != 'auto':
+        style_parts.append(f"margin:{margin}px")
+
+    for key, value in attrs.items():
+        if key in ('src', 'w', 'h', 'm'):
+            continue
+        if _re.fullmatch(r'[a-zA-Z_:][-a-zA-Z0-9_:.]*', key):
+            html_attrs.append(f'{key}="{_html.escape(str(value), quote=True)}"')
+
+    html_attrs.append(f'style="{";".join(style_parts)};"')
+    return f'<img {" ".join(html_attrs)}>'
 
 def _scan_data_content(content: str):
     """
@@ -206,14 +292,18 @@ def _scan_data_content(content: str):
                 continue
                 
             # Opening tag
-            tag_open_match = _re.match(r'^<([a-zA-Z_]+)(?:=([^>]+))?>', content[i:])
-            if tag_open_match:
+            tag_open = _scan_open_tag(content[i:])
+            if tag_open:
                 tok_line, tok_col = line, column
-                tag_name = tag_open_match.group(1)
-                tag_attr = tag_open_match.group(2)
-                advance(len(tag_open_match.group(0)))
-                tokens.append(_Token(_TokenType.TAG_OPEN, tag_name, tok_line, tok_col, tag_attr))
+                tag_text, tag_name, tag_attr = tag_open
+                advance(len(tag_text))
+                tok_type = _TokenType.TAG_SELF if tag_name.lower() == 'img' else _TokenType.TAG_OPEN
+                tokens.append(_Token(tok_type, tag_name, tok_line, tok_col, tag_attr))
                 continue
+
+            tokens.append(_Token(_TokenType.TEXT, '<', line, column))
+            advance(1)
+            continue
 
         # Check for string literals (double quotes)
         if content[i] == '"':
@@ -319,14 +409,14 @@ def _scan_csv_cell_content(cell_val: str):
                 continue
                 
             # Opening tag
-            tag_open_match = _re.match(r'^<([a-zA-Z_]+)(?:=([^>]+))?>', cell_val[i:])
-            if tag_open_match:
+            tag_open = _scan_open_tag(cell_val[i:])
+            if tag_open:
                 flush_text()
                 tag_line, tag_col = line, column
-                tag_name = tag_open_match.group(1)
-                tag_attr = tag_open_match.group(2)
-                advance(len(tag_open_match.group(0)))
-                tokens.append(_Token(_TokenType.TAG_OPEN, tag_name, tag_line, tag_col, tag_attr))
+                tag_text, tag_name, tag_attr = tag_open
+                advance(len(tag_text))
+                tok_type = _TokenType.TAG_SELF if tag_name.lower() == 'img' else _TokenType.TAG_OPEN
+                tokens.append(_Token(tok_type, tag_name, tag_line, tag_col, tag_attr))
                 tok_line, tok_col = line, column
                 continue
         
@@ -464,7 +554,15 @@ def _parse_data_arg(content: str, context: dict = None):
         apply_active_tags(current_cell)
 
     for tok in expanded_tokens:
-        if tok.type == _TokenType.TAG_OPEN:
+        if tok.type == _TokenType.TAG_SELF:
+            tag_name = tok.value.lower()
+            if tag_name == 'img':
+                current_cell.images.append(_parse_img_attrs(tok.attr, tok.line, tok.column))
+                apply_active_tags(current_cell)
+            else:
+                current_cell.text_parts.append(f"<{tok.value}>")
+
+        elif tok.type == _TokenType.TAG_OPEN:
             tag_name = tok.value.lower()
             if tag_name == 'cm' and any(t.value.lower() == 'cm' for t in active_tags):
                 raise ValueError(f"Nested <cm> blocks are not supported at line {tok.line}, column {tok.column}.")
@@ -630,10 +728,12 @@ def _overlay_style_and_data(style_grid: list[list[CellDesc]], data_grid: list[li
                 merged_cell.rm_block_id = style_cell.rm_block_id
                 merged_cell.border_flags = style_cell.border_flags
                 merged_cell.styles = dict(style_cell.styles)
+                merged_cell.images = list(style_cell.images)
 
             if data_cell:
                 merged_cell.raw_expr = data_cell.raw_expr
                 merged_cell.text_parts = list(data_cell.text_parts)
+                merged_cell.images.extend(data_cell.images)
                 if data_cell.cm_block_id is not None:
                     merged_cell.cm_block_id = data_cell.cm_block_id
                 if data_cell.rm_block_id is not None:
@@ -732,26 +832,38 @@ def render_html(model: TableModel) -> str:
 
     table_border = f"border:{model.border_width}px {border_style} {model.border_color};" if apply_to_outer else ""
     table_style = f"border-collapse:collapse;{table_border}"
+    has_images = any(
+        bool(cell.images)
+        for row in model.cells
+        for cell in row
+    )
     if model.stretch == 1:
-        table_style += "width:100%;height:100%;table-layout:fixed;"
+        if has_images:
+            table_style += "width:auto;table-layout:auto;"
+        else:
+            table_style += "width:100%;height:100%;table-layout:fixed;"
     else:
         table_style += "width:100%;table-layout:fixed;"
 
     html = [f'<table style="{table_style}">']
 
-    row_height_style = ""
+    default_row_height_style = ""
     if model.stretch == 1:
-        if model.rows > 0:
-            row_height_style = f"height:{100.0 / model.rows}%;"
+        if model.rows > 0 and not has_images:
+            default_row_height_style = f"height:{100.0 / model.rows}%;"
     else:
-        row_height_style = f"height:{model.cell_height}px;"
+        default_row_height_style = f"height:{model.cell_height}px;"
 
     td_border = f"border:{model.border_width}px {border_style} {model.border_color};" if apply_to_inner else ""
 
     for r in range(model.rows):
+        row_has_images = r < len(model.cells) and any(bool(cell.images) for cell in model.cells[r])
+        row_height_style = "" if model.stretch == 1 and row_has_images else default_row_height_style
         html.append(f'<tr style="{row_height_style}">')
         for c in range(model.cols):
             val = ""
+            href = None
+            images = []
             border_overrides = []
 
             if r < len(model.cells) and c < len(model.cells[r]):
@@ -759,6 +871,7 @@ def render_html(model: TableModel) -> str:
                 val = cell.raw_expr
                 if val == 'None':
                     val = ''
+                images = cell.images
                 
                 if cell.border_flags & BorderFlags.HIDE_LEFT:
                     border_overrides.append("border-left:none;")
@@ -770,7 +883,6 @@ def render_html(model: TableModel) -> str:
                     border_overrides.append("border-bottom:none;")
 
                 # Serialize inline styles (excluding href which is rendered as anchor tag)
-                href = None
                 for prop, prop_val in cell.styles.items():
                     if prop == 'href':
                         href = prop_val
@@ -783,11 +895,18 @@ def render_html(model: TableModel) -> str:
             if model.stretch == 0:
                 td_style += f"height:{model.cell_height}px;"
 
+            forced_img_height = model.cell_height if model.stretch == 0 and images else None
+            content = val + "".join(
+                _render_img_html(img, forced_height=forced_img_height, expand_cell=model.stretch == 1)
+                for img in images
+            )
+
             # Wrap with anchor if url tag was used
             if href:
-                val = f'<a href="{href}" style="color:inherit;text-decoration:inherit;">{val}</a>'
+                safe_href = _html.escape(str(href), quote=True)
+                content = f'<a href="{safe_href}" style="color:inherit;text-decoration:inherit;">{content}</a>'
 
-            html.append(f'<td style="{td_style}">{val}</td>')
+            html.append(f'<td style="{td_style}">{content}</td>')
         html.append('</tr>')
 
     html.append('</table>')
@@ -853,12 +972,46 @@ def _write_model_to_sheet(model: TableModel, ws, start_row: int = 1):
             
             val = ""
             cell_styles = {}
+            images = []
             if r < len(model.cells) and c < len(model.cells[r]):
                 val = model.cells[r][c].raw_expr
                 if val == 'None':
                     val = ''
                 cell_styles = model.cells[r][c].styles
-            cell_ref.value = val
+                images = model.cells[r][c].images
+            cell_ref.value = val or (images[0].get('src', '') if images else '')
+
+            if images:
+                img_src = images[0].get('src', '')
+                if img_src.startswith(('http://', 'https://')):
+                    cell_ref.hyperlink = img_src
+                elif _os.path.exists(img_src):
+                    try:
+                        from openpyxl.drawing.image import Image as XLImage
+
+                        sheet_img = XLImage(img_src)
+                        width = images[0].get('w')
+                        height = images[0].get('h')
+                        original_width = sheet_img.width
+                        original_height = sheet_img.height
+
+                        if width and width != 'auto' and height and height != 'auto':
+                            sheet_img.width = int(width)
+                            sheet_img.height = int(height)
+                        elif width and width != 'auto':
+                            sheet_img.width = int(width)
+                            if original_width:
+                                sheet_img.height = int(original_height * int(width) / original_width)
+                        elif height and height != 'auto':
+                            sheet_img.height = int(height)
+                            if original_height:
+                                sheet_img.width = int(original_width * int(height) / original_height)
+
+                        ws.add_image(sheet_img, cell_ref.coordinate)
+                        if not val:
+                            cell_ref.value = None
+                    except Exception:
+                        pass
             
             if apply_to_inner:
                 cell_ref.border = Border(left=border_side, right=border_side, top=border_side, bottom=border_side)
@@ -1088,11 +1241,15 @@ def _create_pdf_table_object(model: TableModel):
         for c in range(model.cols):
             val = ""
             cell_styles = {}
+            images = []
             if r < len(model.cells) and c < len(model.cells[r]):
                 val = model.cells[r][c].raw_expr
                 if val == 'None':
                     val = ''
                 cell_styles = model.cells[r][c].styles
+                images = model.cells[r][c].images
+            if images and not val:
+                val = images[0].get('src', '')
 
             # Background fill
             if 'background-color' in cell_styles:

@@ -91,6 +91,69 @@ def test_html_url_tag():
     # href must NOT appear in td style attribute
     assert 'href:' not in html
 
+def test_html_url_tag_allows_spaced_attribute_values():
+    expr = '1,1,1,"#000","solid",0,40, data(<url={{ profile_url }}>Profile</url>)'
+    html = tentags.render(expr)
+
+    assert '<a href="{{ profile_url }}"' in html
+    assert ">Profile</a>" in html
+
+def test_html_img_single_tag():
+    # Test compact single <img> tag with local and remote sources
+    expr = (
+        '1,2,1,"#000","solid",1,40, '
+        'data(<img src=logo.png w=120 h=auto m=15>, '
+        '<img src=https://pycells.com/assets/img/PyCells_mds.png w=120 h=auto>)'
+    )
+    model = tentags.parse(expr)
+    html = tentags.render_html(model)
+
+    assert model.cells[0][0].raw_expr == ""
+    assert model.cells[0][0].images[0]["src"] == "logo.png"
+    assert model.cells[0][0].images[0]["w"] == "120"
+    assert model.cells[0][0].images[0]["h"] == "auto"
+    assert model.cells[0][0].images[0]["m"] == "15"
+
+    assert '<img src="logo.png" width="120"' in html
+    assert '<img src="https://pycells.com/assets/img/PyCells_mds.png" width="120"' in html
+    assert "width:120px" in html
+    assert "height:auto" in html
+    assert "margin:15px" in html
+    assert "width:auto;table-layout:auto;" in html
+
+def test_html_img_size_rules():
+    expr = '1,3,1,"#000","solid",1,40, data(<img src=photo.jpg w=200 h=150>, <img src=qrcode.png w=80 h=80 m=27>, <img src=tall.png h=90>)'
+    html = tentags.render(expr)
+
+    assert 'src="photo.jpg" width="200" height="150"' in html
+    assert "width:200px" in html
+    assert "height:150px" in html
+    assert 'src="qrcode.png" width="80" height="80"' in html
+    assert "margin:27px" in html
+    assert 'src="tall.png"' in html
+    assert "height:90px" in html
+    assert "width:auto" in html
+
+def test_html_img_fixed_table_forces_height_from_preamble():
+    expr = '1,1,1,"#000","solid",0,64, data(<img src=logo.png w=120 h=auto m=15>)'
+    html = tentags.render(expr)
+
+    assert '<img src="logo.png" height="64"' in html
+    assert "height:64px" in html
+    assert "width:auto" in html
+    assert 'width="120"' not in html
+    assert "height:64px;margin:15px" in html
+
+def test_html_img_requires_src():
+    expr = '1,1,1,"#000","solid",0,40, data(<img w=120 h=auto>)'
+    with pytest.raises(ValueError, match="<img> requires src="):
+        tentags.parse(expr)
+
+def test_html_img_margin_must_be_number():
+    expr = '1,1,1,"#000","solid",0,40, data(<img src=logo.png w=120 h=auto m=auto>)'
+    with pytest.raises(ValueError, match="<img> attribute m= must be a pixel number"):
+        tentags.parse(expr)
+
 def test_html_alignment_and_font_size():
     # Test <fs=XX>, <left>, <center>, <right> tags
     expr = '1,3,1,"#000","solid",0,40, data(<fs=16><left>Left 16</left></fs>, <center>Center</center>, <right>Right</right>)'

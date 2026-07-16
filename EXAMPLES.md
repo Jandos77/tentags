@@ -164,6 +164,40 @@ tentags.render(
 
 ---
 
+### Images
+
+`<img>` is a single TenTags element with compact `key=value` attributes.
+
+| Tag | Description |
+|---|---|
+| `<img src=logo.png w=120 h=auto m=15>` | Image with local source, automatic height, and 15px margin |
+| `<img src=https://example.com/image.png w=300 h=auto>` | Image with remote source |
+
+Size rules:
+- `w` and `h` are pixels by default.
+- `h=auto` preserves proportions.
+- `m` is margin in pixels on all four sides.
+- If the sixth preamble argument (`stretch`) is `1`, image cells can expand with the rendered image size.
+- If `stretch` is `0`, image height is forced to the seventh preamble argument (`cell_height`) and width becomes `auto`.
+- In `stretch=1` mode, if only `w` is provided, height is automatic.
+- In `stretch=1` mode, if only `h` is provided, width is automatic.
+- In `stretch=1` mode, if both are numbers, the image is rendered at exactly that size.
+
+```python
+tentags.render('1,1,1,"black","solid",1,80, data(<img src=logo.png w=120 h=auto m=15>)')
+
+tentags.render('1,1,1,"black","solid",1,80, data(<img src=https://pycells.com/assets/img/PyCells_mds.png w=120 h=auto>)')
+
+tentags.render('1,2,1,"black","solid",0,80, data(<img src=photo.jpg w=200 h=150>, <img src=qrcode.png w=80 h=80>)')
+```
+
+**Rendering per target:**
+- **HTML** — native `<img>` inside the `<td>`.
+- **Excel (XLSX)** — local files are embedded when supported by `openpyxl`; remote URLs fall back to a linked `src`.
+- **PDF** — falls back to the image `src` text.
+
+---
+
 ### CSV Import
 
 ```python
@@ -684,7 +718,7 @@ style    = '''style(
 
 entries = [
     ('<url=https://github.com/tentags>GitHub Repository</url>', 'Open Source', '<color=green>Active</color>'),
-    ('<url=https://pypi.org/project/tentags>PyPI Package</url>', 'v2.0.2',     '<u>Stable</u>'),
+    ('<url=https://pypi.org/project/tentags>PyPI Package</url>', 'v2.0.3',     '<u>Stable</u>'),
     ('<url=https://tentags.readthedocs.io>Documentation</url>',  'Read the Docs', '<color=blue>Online</color>'),
 ]
 rows = '; '.join(f'{link}, {badge}, {status}' for link, badge, status in entries)
@@ -780,6 +814,7 @@ async def sales_report(request: Request, db: Session = Depends(get_db)):
 | Alignment | `<left>`, `<center>`, `<right>` | Horizontal text alignment |
 | Merging | `<cm>`, `<rm>` | Horizontal / vertical cell joining |
 | Link | `<url=https://...>` | Clickable hyperlink |
+| Image | `<img src=... w=... h=... m=...>` | Single image element |
 | Data | `csv("path")` | Inline CSV import |
 
 ### Where to write tags
@@ -788,6 +823,7 @@ async def sales_report(request: Request, db: Session = Depends(get_db)):
 |---|---|
 | `<b>`, `<i>`, `<u>`, `<s>`, `<color>`, `<bg>`, `<fs>`, `<left>`, `<center>`, `<right>`, `<cm>`, `<rm>` | `style()` or `data()` — use `style()` for reusable presentation |
 | `<url=...>` | `data()` — unique per row |
+| `<img src=...>` | `data()` — unique visual content per row |
 | `{{ variable }}` (Django / Jinja2) | `data()` — dynamic content from backend |
 
 ### Decoupled block order

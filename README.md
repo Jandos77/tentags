@@ -161,6 +161,7 @@ Additional supported tags:
 | `<u>...</u>` | Underlines text. | `data(<u>Underlined</u>)` |
 | `<s>...</s>` | Strikes through text. | `data(<s>Cancelled</s>)` |
 | `<url=...>...</url>` | Creates a hyperlink. | `data(<url=https://example.com>Open site</url>)` |
+| `<img src=... w=... h=... m=...>` | Adds a single image tag. `m` is margin in pixels. With `stretch=1`, the cell can grow with the image; with `stretch=0`, image height is forced to the preamble cell height and width becomes `auto`. | `data(<img src=logo.png w=120 h=auto m=15>)` |
 
 ---
 
@@ -268,8 +269,8 @@ tentags.render_pdf(model, "Enterprise_Budget_Matrix.pdf")
 ## 🛠️ API Reference
 
 ### Module Constants & Metadata
-- **`tentags.__version__`**: Library version string (e.g., `'2.0.2'`).
-- **`tentags.version_info`**: Version tuple for checking compatibility (e.g., `(2, 0, 2)`).
+- **`tentags.__version__`**: Library version string (e.g., `'2.0.3'`).
+- **`tentags.version_info`**: Version tuple for checking compatibility (e.g., `(2, 0, 3)`).
 - **`tentags.__author__`**: Author name (`'Zhandos Mambetali'`).
 - **`tentags.__license__`**: Project license (`'Apache-2.0'`).
 - **`tentags.__homepage__`**: Link to home website (`'https://tentags.org'`).

@@ -6,6 +6,16 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.0.3] - 2026-07-16
+
+### Added
+- Added the single `<img src=... w=... h=...>` tag for compact image cells in `data()`.
+- Added `m=<pixels>` support for equal image margin on all four sides.
+- Added stretch-aware image rendering: `stretch=1` lets image cells expand with the image, while `stretch=0` forces image height to `cell_height` and width to `auto`.
+- Documented image sizing rules for numeric pixel sizes and `auto`.
+
+---
+
 ## [2.0.2] - 2026-07-15
 
 ### Fixed
@@ -22,16 +32,16 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   `_Union[str, _Any]`. Fixed to be consistent with all other type annotations in the file.
 
 > **Removed from PyPI** due to a defect discovered after publication.
-> Use **2.0.2** instead.
+> Use **2.0.3** instead.
 
 ---
 
 ## [2.0.0] - yanked
 
 > **Removed from PyPI** due to `NameError: Union is not defined` on Python 3.13+ at import.  
-> Use **2.0.2** instead.
+> Use **2.0.3** instead.
 
-### Added (carried into 2.0.2)
+### Added (carried into 2.0.2 and later)
 - `<u>` tag — underline text (HTML inline CSS, XLSX `Font(underline="single")`, PDF `UNDERLINE`)
 - `<s>` tag — strikethrough text (HTML inline CSS, XLSX `Font(strike=True)`, PDF `STRIKETHROUGH`)
 - `<url=https://...>` tag — clickable hyperlink (HTML `<a>`, XLSX native hyperlink, PDF `<link>`)
@@ -50,7 +60,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [1.1.4] - yanked
 
 > **Removed from PyPI** — contained the same `NameError: Union is not defined` bug on Python 3.13+.
-> Use **2.0.2** instead.
+> Use **2.0.3** instead.
 
 ---
 
