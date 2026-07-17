@@ -54,7 +54,7 @@ Multiple Tables:
 
 Utilities:
   demo()             Generate sample documents
-  get_promt()        Return the bundled LLM bootstrap prompt
+  get_prompt()       Return the bundled LLM bootstrap prompt
   info()             Display system diagnostic info
   features()         Check available render backends
 
@@ -100,7 +100,6 @@ __all__ = [
     "DEFAULT_MULTITABLE_PDF_SETTINGS",
     "features",
     "info",
-    "get_promt",
     "get_prompt",
     "validate",
     "demo",
@@ -2722,12 +2721,11 @@ def info() -> None:
     print("✓ Validation")
     print("✓ Demo")
 
-def get_promt(print_output: bool = False) -> str:
+def get_prompt(print_output: bool = False) -> str:
     """
     Return the bundled TenTags LLM bootstrap prompt.
 
-    The misspelled name is kept intentionally because it is the public API
-    requested by users. Pass print_output=True to also print the prompt.
+    Pass print_output=True to also print the prompt.
     """
     from importlib import resources as _resources
     resource_name = "TENTAGS_LLM_BOOTSTRAP_PROMPT.md"
@@ -2750,12 +2748,6 @@ def get_promt(print_output: bool = False) -> str:
     if print_output:
         print(prompt)
     return prompt
-
-def get_prompt(print_output: bool = False) -> str:
-    """
-    Correctly spelled alias for get_promt().
-    """
-    return get_promt(print_output=print_output)
 
 def validate(formula: str) -> dict:
     """

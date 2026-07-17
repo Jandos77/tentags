@@ -52,10 +52,9 @@ Current version:
 TenTags is currently 2.1.0. Do not change version metadata unless explicitly asked.
 
 Bundled prompt API:
-- The installed library exposes this bootstrap prompt through `tentags.get_promt()`.
-- `tentags.get_promt()` returns the prompt text as a string.
-- `tentags.get_promt(print_output=True)` prints it and also returns it.
-- `tentags.get_prompt()` is a correctly spelled alias.
+- The installed library exposes this bootstrap prompt through `tentags.get_prompt()`.
+- `tentags.get_prompt()` returns the prompt text as a string.
+- `tentags.get_prompt(print_output=True)` prints it and also returns it.
 
 Architecture:
 TenTags defines a logical document model and a declarative language for constructing it.

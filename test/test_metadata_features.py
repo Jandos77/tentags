@@ -59,7 +59,8 @@ def test_metadata_features():
     assert tentags.__license__ == pyproject["project"]["license"]
     assert tentags.__copyright__ == "Copyright (c) 2026 Zhandos Mambetali"
     assert tentags.__url__ == "https://tentags.org"
-    assert "get_promt" in tentags.__all__
+    assert "get_prompt" in tentags.__all__
+    assert not hasattr(tentags, "get_promt")
     
     # 2. Check info()
     print("\n--- Running tentags.info() ---")
@@ -99,15 +100,14 @@ def test_metadata_features():
     print("\nAll metadata & diagnostic helper tests passed successfully!")
 
 
-def test_get_promt_returns_bundled_llm_bootstrap_prompt(capsys):
-    prompt = tentags.get_promt()
+def test_get_prompt_returns_bundled_llm_bootstrap_prompt(capsys):
+    prompt = tentags.get_prompt()
 
     assert isinstance(prompt, str)
     assert "TenTags LLM Bootstrap Prompt" in prompt
     assert "TenTags is currently 2.1.0" in prompt
-    assert prompt == tentags.get_prompt()
 
-    printed_prompt = tentags.get_promt(print_output=True)
+    printed_prompt = tentags.get_prompt(print_output=True)
     captured = capsys.readouterr()
 
     assert printed_prompt == prompt

@@ -306,13 +306,13 @@ Checks the availability of optional rendering backends. Returns a dictionary:
 }
 ```
 
-#### `tentags.get_promt(print_output: bool = False) -> str`
+#### `tentags.get_prompt(print_output: bool = False) -> str`
 Returns the bundled LLM bootstrap prompt for teaching another model how to work with TenTags. Pass `print_output=True` to also print it:
 ```python
 import tentags
 
-prompt = tentags.get_promt()
-tentags.get_promt(print_output=True)
+prompt = tentags.get_prompt()
+tentags.get_prompt(print_output=True)
 ```
 
 #### `tentags.validate(formula: str) -> dict`
