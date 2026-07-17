@@ -58,6 +58,16 @@ At its core, **TenTags** is a unified **Intermediate Representation (IR)** table
 - 📊 **Triple Backend Rendering**: Directly compile your IR to high-fidelity **HTML** (`render_html`), native **Excel (`.xlsx`)** (`render_xlsx`), or vector **PDF (`.pdf`)** (`render_pdf`).
 - ⚡ **Lightweight & Modular Runtime**: Pure Python runtime (`xml.etree.ElementTree`) for DSL tokenization and HTML rendering. Optional Excel export (`openpyxl`) and PDF export (`reportlab`).
 
+### 🧭 Language Evolution Rule
+
+A new TenTags tag may be added only if all three conditions are true:
+
+1. It can be interpreted consistently by all renderers.
+2. It belongs to the logical document model, not to one renderer's physical representation.
+3. It cannot be expressed cleanly with existing TenTags primitives.
+
+This keeps TenTags compact, predictable, and renderer-independent.
+
 ---
 
 ## ⚡ Quick Start: Programmatic Template Generation

@@ -57,6 +57,14 @@ The Intermediate Representation describes logical structure, not physical render
 Do not put PDF pages, HTML DOM nodes, HTML id attributes, XLSX worksheets, render coordinates, or pixel positions into IR.
 Renderer-specific concepts belong only in renderer layers.
 
+Language evolution rule:
+A new tag may be added only if all three conditions are true:
+1. It can be interpreted consistently by all renderers.
+2. It belongs to the logical document model, not to one renderer's physical representation.
+3. It cannot be expressed cleanly with existing TenTags primitives.
+
+This rule protects TenTags from turning into a catch-all language. Prefer preserving the compact DSL over adding convenience tags.
+
 Main model:
 - TableModel: rows, cols, cells, border_width, border_color, border_style, stretch, cell_height.
 - CellDesc: raw_expr, text_parts, images, link, mark, value_refs, styles, merge/border flags.
@@ -474,6 +482,12 @@ Each List must have its own:
 - style(...)
 - data(...)
 
+Hard validation rule for every table item in multitable:
+- For each table in tables[], preamble rows == style rows == data rows.
+- For each table in tables[], preamble cols == style cols == data cols.
+- Never check only the combined report. Validate every individual table item before calling multitable_html(), multitable_xlsx(), or multitable_pdf().
+- A mismatch can make HTML/XLSX look partially okay but break PDF destinations, marks, links, or layout.
+
 Functions:
 
 tentags.multitable_html(
@@ -835,6 +849,8 @@ Coding conventions:
 Self-check before answering:
 - preamble rows == style rows == data rows when style/data are explicit matrices.
 - preamble cols == style cols == data cols when style/data are explicit matrices.
+- For multitable examples, repeat the row/column check separately for every dict in tables[].
+- Do not let a table item declare 3 rows in preamble while data(...) contains 4 rows, especially if the extra row contains <mark> or goto targets.
 - All paired tags are properly opened and closed.
 - Single tags such as <mark>, <img>, and <value> are not closed.
 - Address syntax is canonical PyCells-compatible Table!List!A1, Table!List!A1:B3, or Table!List!Summary.

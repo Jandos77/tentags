@@ -733,6 +733,76 @@ def _normalize_output_target(output):
         return output
     return _os.fspath(output)
 
+_PDF_FONT_CACHE = None
+
+def _find_existing_file(paths: list[str]) -> str:
+    for path in paths:
+        if path and _os.path.exists(path):
+            return path
+    return None
+
+def _pdf_font_names() -> dict:
+    """
+    Returns ReportLab font names with Unicode coverage when a local TTF is available.
+    Falls back to built-in PDF fonts when no suitable TTF can be found.
+    """
+    global _PDF_FONT_CACHE
+    if _PDF_FONT_CACHE is not None:
+        return _PDF_FONT_CACHE
+
+    fonts = {
+        "regular": "Helvetica",
+        "bold": "Helvetica-Bold",
+        "italic": "Helvetica-Oblique",
+        "bold_italic": "Helvetica-BoldOblique",
+    }
+
+    try:
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.ttfonts import TTFont
+    except Exception:
+        _PDF_FONT_CACHE = fonts
+        return fonts
+
+    windir = _os.environ.get("WINDIR", r"C:\Windows")
+    candidates_regular = [
+        _os.path.join(windir, "Fonts", "arial.ttf"),
+        _os.path.join(windir, "Fonts", "calibri.ttf"),
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
+        "/Library/Fonts/Arial Unicode.ttf",
+        "/Library/Fonts/Arial.ttf",
+    ]
+    candidates_bold = [
+        _os.path.join(windir, "Fonts", "arialbd.ttf"),
+        _os.path.join(windir, "Fonts", "calibrib.ttf"),
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf",
+        "/Library/Fonts/Arial Bold.ttf",
+    ]
+
+    regular_path = _find_existing_file(candidates_regular)
+    bold_path = _find_existing_file(candidates_bold)
+    if regular_path:
+        try:
+            pdfmetrics.registerFont(TTFont("TenTagsUnicode", regular_path))
+            fonts["regular"] = "TenTagsUnicode"
+            fonts["italic"] = "TenTagsUnicode"
+            fonts["bold_italic"] = "TenTagsUnicode"
+        except Exception:
+            pass
+    if bold_path and fonts["regular"] == "TenTagsUnicode":
+        try:
+            pdfmetrics.registerFont(TTFont("TenTagsUnicode-Bold", bold_path))
+            fonts["bold"] = "TenTagsUnicode-Bold"
+            fonts["bold_italic"] = "TenTagsUnicode-Bold"
+        except Exception:
+            fonts["bold"] = fonts["regular"]
+            fonts["bold_italic"] = fonts["regular"]
+
+    _PDF_FONT_CACHE = fonts
+    return fonts
+
 def _scan_open_tag(source: str):
     tag_open_match = _re.match(r'^<([a-zA-Z_]+)(?:=([^>]+)|\s+([^>]+))?>', source)
     if not tag_open_match:
@@ -1823,6 +1893,7 @@ def _create_pdf_table_object(
     from reportlab.lib.styles import ParagraphStyle
     current_target = address_context or _make_address_target(model)
     resolver = address_resolver or _local_address_resolver(current_target)
+    pdf_fonts = _pdf_font_names()
 
     # Convert border/background color to reportlab color
     def hex_to_rl_color(hex_str: str, default=colors.black):
@@ -1948,13 +2019,13 @@ def _create_pdf_table_object(
                 if num_match:
                     font_size = int(num_match.group(0))
 
-            font_name = 'Helvetica'
+            font_name = pdf_fonts["regular"]
             if is_bold and is_italic:
-                font_name = 'Helvetica-BoldOblique'
+                font_name = pdf_fonts["bold_italic"]
             elif is_bold:
-                font_name = 'Helvetica-Bold'
+                font_name = pdf_fonts["bold"]
             elif is_italic:
-                font_name = 'Helvetica-Oblique'
+                font_name = pdf_fonts["italic"]
 
             table_styles.append(('FONTNAME', (c, r), (c, r), font_name))
             table_styles.append(('FONTSIZE', (c, r), (c, r), font_size))
@@ -2430,6 +2501,7 @@ def multitable_pdf(
         topMargin=settings["margins"][2],
         bottomMargin=settings["margins"][3]
     )
+    pdf_fonts = _pdf_font_names()
 
     resolver = AddressResolver()
     materialized = []
@@ -2461,7 +2533,7 @@ def multitable_pdf(
         if title:
             p_style = ParagraphStyle(
                 f"Title_{index}",
-                fontName="Helvetica-Bold",
+                fontName=pdf_fonts["bold"],
                 fontSize=14,
                 leading=18,
                 spaceAfter=10
