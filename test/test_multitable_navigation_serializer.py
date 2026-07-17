@@ -128,6 +128,15 @@ PDF_SETTINGS = {
     "orientation": "landscape",
 }
 
+SHARED_REPL_SETTINGS = {
+    "table_order": ["Dashboard!Menu", "Sales!Report", "Products!Catalog", "Customers!List"],
+    "tables_per_row": 2,
+    "layout": "grid",
+    "cols": 2,
+    "gap": "24px",
+    "full_page": True,
+}
+
 
 def build_multitable_navigation_serializer_artifacts():
     tables = _tables()
@@ -155,6 +164,28 @@ def test_multitable_navigation_serializer_outputs_files_in_demo_output():
     assert pdf_bytes.startswith(b"%PDF")
     assert pdf_output.stat().st_size > 1000
     assert b"/FontFile2" in pdf_bytes
+
+
+def test_multitable_pdf_accepts_shared_html_gap_setting():
+    output = demo_output_path("demo_multitable_navigation_shared_gap.pdf")
+    if output.exists():
+        output.unlink()
+
+    tentags.multitable_pdf(
+        _tables(),
+        settings={
+            **SHARED_REPL_SETTINGS,
+            "output": output,
+            "page_size": "A4",
+            "orientation": "landscape",
+            "tables_per_row": "auto",
+            "tables_per_page": "auto",
+        },
+    )
+
+    data = output.read_bytes()
+    assert data.startswith(b"%PDF")
+    assert output.stat().st_size > 1000
 
 
 if __name__ == "__main__":

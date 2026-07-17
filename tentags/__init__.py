@@ -62,17 +62,17 @@ Website: https://tentags.org
 Documentation: https://tentags.org/docs
 GitHub: https://github.com/Jandos77/tentags
 
-Current Version: 2.1.0
+Current Version: 2.1.1
 License: Apache License 2.0
 """
 
-__version__ = "2.1.0"
+__version__ = "2.1.1"
 __author__ = "Zhandos Mambetali"
 __license__ = "Apache-2.0"
 __copyright__ = "Copyright (c) 2026 Zhandos Mambetali"
 __homepage__ = "https://tentags.org"
 __url__ = "https://tentags.org"
-version_info = (2, 1, 0)
+version_info = (2, 1, 1)
 
 __all__ = [
     "__version__",
@@ -712,6 +712,20 @@ def _pdf_settings(defaults: dict, settings: dict = None, overrides: dict = None)
             merged["tables_per_page"] = "auto"
         elif not isinstance(tables_per_page, int) or tables_per_page < 1:
             raise ValueError('PDF tables_per_page must be a positive integer or "auto".')
+    gap = merged.get("gap")
+    if isinstance(gap, str):
+        normalized_gap = gap.strip().lower()
+        if normalized_gap.endswith(("px", "pt")):
+            normalized_gap = normalized_gap[:-2].strip()
+        try:
+            gap = float(normalized_gap)
+        except ValueError:
+            raise ValueError('PDF gap must be a number, or a string like "24", "24px", or "24pt".')
+        merged["gap"] = gap
+    elif gap is not None and not isinstance(gap, (int, float)):
+        raise ValueError('PDF gap must be a number, or a string like "24", "24px", or "24pt".')
+    if gap is not None and gap < 0:
+        raise ValueError("PDF gap must be greater than or equal to 0.")
     if (
         tables_per_page is not None
         and isinstance(merged.get("tables_per_row"), int)

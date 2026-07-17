@@ -6,6 +6,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.1.1] - 2026-07-17
+
+### Fixed
+- Fixed `multitable_pdf()` layout when shared HTML/PDF settings pass `gap` as a CSS-like string such as `"24px"`.
+- PDF multitable `gap` now accepts numbers and numeric strings with optional `px` or `pt` suffixes.
+
+---
+
 ## [2.1.0] - 2026-07-17
 
 Serializer API, Addressing Model, and Multitable Layout.
