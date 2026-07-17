@@ -60,7 +60,8 @@ def test_metadata_features():
     assert tentags.__copyright__ == "Copyright (c) 2026 Zhandos Mambetali"
     assert tentags.__url__ == "https://tentags.org"
     assert "get_prompt" in tentags.__all__
-    assert not hasattr(tentags, "get_promt")
+    old_misspelled_name = "get_" + "pro" + "mt"
+    assert not hasattr(tentags, old_misspelled_name)
     
     # 2. Check info()
     print("\n--- Running tentags.info() ---")

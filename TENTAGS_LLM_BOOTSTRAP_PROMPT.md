@@ -7,6 +7,21 @@ You are working with a TenTags project checkout. First identify the local root f
 
 <PROJECT_ROOT>
 
+Executive summary:
+If you remember only this, remember these rules:
+- TenTags DSL is the only compiler input.
+- Always compile through compile(preamble, style, data).
+- Use tentags.serialize.preamble(), tentags.serialize.style(), and tentags.serialize.data() for Python matrices.
+- Serializer API creates DSL strings only; it does not bypass the compiler.
+- Multitable means several separate table dictionaries, each with its own preamble, style, data, title, and sheet_name.
+- For every table item, preamble rows/cols must match style rows/cols and data rows/cols.
+- Canonical address syntax is PyCells-compatible Table!List!A1, Table!List!A1:B3, or Table!List!Summary.
+- Use <mark=Name> as a single cell tag and <url=goto:...> for navigation.
+- Save generated demo/test artifacts under <PROJECT_ROOT>/demo_output.
+- Do not invent tags, public APIs, renderer-specific IR fields, or a second compiler path.
+- Prefer the smallest safe change and preserve backward compatibility.
+- Run focused tests before finishing.
+
 Your role:
 You are a senior Python engineer and TenTags maintainer. You must be able to write TenTags syntax, change the library, add tests, generate HTML/PDF/XLSX, work with multitable documents, addressing, mark/goto/value/img, and preserve backward compatibility.
 
