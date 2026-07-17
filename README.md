@@ -12,9 +12,9 @@
 
 **TenTags** is a declarative template language and **Intermediate Representation (IR)** for automated **HTML**, **Excel (`.xlsx`)**, and **PDF** table and document generation.
 
-### 🚀 Current Release: 2.1.2
+### 🚀 Current Release: 2.1.3
 
-**TenTags 2.1.2** is a bugfix release that keeps HTML, PDF, and XLSX table alignment behavior consistent, preserving the Serializer API, Addressing Model, and Multitable Layout introduced in 2.1.0.
+**TenTags 2.1.3** is a bugfix release that preserves multiline `style(...)` rows whose cells contain only tags and no text. This keeps style overlays correct for open tags spanning several rows, while preserving the Serializer API, Addressing Model, and Multitable Layout introduced in 2.1.0.
 
 ### 💡 Why TenTags? (A Language for Programs & AI, Not Manual Editing)
 
@@ -168,6 +168,8 @@ TenTags derives its name from the **10 core structural and styling tags** suppor
 
 > **Note on Tag Transfer & Empty Elements**: Notice how empty elements (such as `, ,` or `, ;`) are used when adjacent cells are absorbed by a `<cm>` horizontal merge or `<rm>` vertical merge. TenTags automatically transfers and preserves all active tags across cell boundaries without requiring explicit `None` placeholders.
 
+> **Important for `style(...)` rows**: A style cell may be empty by text but still meaningful because it carries active or closing tags, for example `<bg=#eff6ff></bg></u></left>`. Versions before **2.1.3** could incorrectly drop a final styled-empty row in multiline `style(...)` blocks. In 2.1.3 and later, these rows are preserved; when writing tests or LLM prompts, count them as real style rows.
+
 Additional supported tags:
 
 | Tag / Syntax | Description | Example |
@@ -283,8 +285,8 @@ tentags.render_pdf(model, "Enterprise_Budget_Matrix.pdf")
 ## 🛠️ API Reference
 
 ### Module Constants & Metadata
-- **`tentags.__version__`**: Library version string (e.g., `'2.1.2'`).
-- **`tentags.version_info`**: Version tuple for checking compatibility (e.g., `(2, 1, 2)`).
+- **`tentags.__version__`**: Library version string (e.g., `'2.1.3'`).
+- **`tentags.version_info`**: Version tuple for checking compatibility (e.g., `(2, 1, 3)`).
 - **`tentags.__author__`**: Author name (`'Zhandos Mambetali'`).
 - **`tentags.__license__`**: Project license (`'Apache-2.0'`).
 - **`tentags.__homepage__`**: Link to home website (`'https://tentags.org'`).

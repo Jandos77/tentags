@@ -62,17 +62,17 @@ Website: https://tentags.org
 Documentation: https://tentags.org/docs
 GitHub: https://github.com/Jandos77/tentags
 
-Current Version: 2.1.2
+Current Version: 2.1.3
 License: Apache License 2.0
 """
 
-__version__ = "2.1.2"
+__version__ = "2.1.3"
 __author__ = "Zhandos Mambetali"
 __license__ = "Apache-2.0"
 __copyright__ = "Copyright (c) 2026 Zhandos Mambetali"
 __homepage__ = "https://tentags.org"
 __url__ = "https://tentags.org"
-version_info = (2, 1, 2)
+version_info = (2, 1, 3)
 
 __all__ = [
     "__version__",
@@ -1317,10 +1317,24 @@ def _parse_data_arg(content: str, context: dict = None):
         unclosed = active_tags[-1]
         raise ValueError(f"Missing closing tag </{unclosed.value}> (opened at line {unclosed.line}, column {unclosed.column}).")
 
-    # Remove trailing empty row if created by a trailing semicolon
+    def is_plain_empty_cell(cell):
+        return (
+            cell.raw_expr == ""
+            and not cell.styles
+            and not cell.images
+            and cell.link is None
+            and cell.mark is None
+            and not cell.value_refs
+            and cell.cm_block_id is None
+            and cell.rm_block_id is None
+            and cell.border_flags == BorderFlags.NONE
+        )
+
+    # Remove trailing empty row if created by a trailing semicolon.
+    # Keep styled-empty cells: style(...) often uses empty cell bodies to carry presentation.
     if len(cells_grid) > 1:
         last_row = cells_grid[-1]
-        if len(last_row) == 1 and last_row[0].raw_expr == "":
+        if len(last_row) == 1 and is_plain_empty_cell(last_row[0]):
             cells_grid.pop()
 
     # Apply Column Merge borders

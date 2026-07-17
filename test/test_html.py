@@ -268,3 +268,29 @@ def test_load_style_and_data_api():
     assert "background-color:#eee;" in html
 
 
+def test_trailing_styled_empty_style_row_is_preserved():
+    model = tentags.compile(
+        '3,1,1,"#ccc","solid",0,24',
+        """
+        style(
+            <left><u><bg=#dbeafe><color=#1e3a8a><b></b></color></bg>;
+            <bg=#eff6ff></bg>;
+            <bg=#eff6ff></bg></u></left>
+        )
+        """,
+        """
+        data(
+            First;
+            Second;
+            Third
+        )
+        """,
+    )
+
+    assert model.cells[0][0].styles["text-align"] == "left"
+    assert model.cells[1][0].styles["text-align"] == "left"
+    assert model.cells[2][0].styles["text-align"] == "left"
+    assert model.cells[2][0].styles["text-decoration"] == "underline"
+    assert model.cells[2][0].styles["background-color"] == "#eff6ff"
+
+

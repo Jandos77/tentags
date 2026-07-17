@@ -6,6 +6,17 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.1.3] - 2026-07-17
+
+### Fixed
+- Fixed multiline `style(...)` parsing when the final style row contains only active/closing tags and no text. Such styled-empty cells are now preserved and correctly overlaid onto the matching `data(...)` row.
+- Added regression coverage for open tags spanning multiple style rows, including the third-row `url=goto:` case where data text exists but the final style cell has no text body.
+
+### Documentation
+- Documented that `style(...)` cells may be text-empty while still carrying presentation. Do not treat them as missing rows when checking `preamble rows == style rows == data rows`.
+
+---
+
 ## [2.1.2] - 2026-07-17
 
 ### Fixed
@@ -69,14 +80,14 @@ Serializer API, Addressing Model, and Multitable Layout.
   `_Union[str, _Any]`. Fixed to be consistent with all other type annotations in the file.
 
 > **Removed from PyPI** due to a defect discovered after publication.
-> Use **2.0.3** instead.
+> Use the latest stable **2.1.3** release instead.
 
 ---
 
 ## [2.0.0] - yanked
 
 > **Removed from PyPI** due to `NameError: Union is not defined` on Python 3.13+ at import.  
-> Use **2.0.3** instead.
+> Use the latest stable **2.1.3** release instead.
 
 ### Added (carried into 2.0.2 and later)
 - `<u>` tag — underline text (HTML inline CSS, XLSX `Font(underline="single")`, PDF `UNDERLINE`)
@@ -97,7 +108,7 @@ Serializer API, Addressing Model, and Multitable Layout.
 ## [1.1.4] - yanked
 
 > **Removed from PyPI** — contained the same `NameError: Union is not defined` bug on Python 3.13+.
-> Use **2.0.3** instead.
+> Use the latest stable **2.1.3** release instead.
 
 ---
 

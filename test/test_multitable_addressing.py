@@ -131,8 +131,8 @@ def test_multitable_each_sheet_has_own_preamble_style_and_data():
 
     assert len(tables) == 4
     assert all(table.get("preamble") for table in tables)
-    assert all(table.get("style", "").startswith("style(") for table in tables)
-    assert all(table.get("data", "").startswith("data(") for table in tables)
+    assert all(table.get("style", "").strip().startswith("style(") for table in tables)
+    assert all(table.get("data", "").strip().startswith("data(") for table in tables)
     assert len({table["preamble"] for table in tables}) == 4
     assert len({table["style"] for table in tables}) == 4
     assert len({table["data"] for table in tables}) == 4

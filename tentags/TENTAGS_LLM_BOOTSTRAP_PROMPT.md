@@ -64,7 +64,7 @@ Public API stability:
 - Preserve old behavior unless the user explicitly asks for a breaking change.
 
 Current version:
-TenTags is currently 2.1.2. Do not change version metadata unless explicitly asked.
+TenTags is currently 2.1.3. Do not change version metadata unless explicitly asked.
 
 Bundled prompt API:
 - The installed library exposes this bootstrap prompt through `tentags.get_prompt()`.
@@ -142,10 +142,31 @@ Important tag warnings:
 - <mark=Summary> is a single tag. Never write </mark>.
 - Correct: <mark=Summary><b>Summary</b>
 - Wrong: <mark=Summary><b>Summary</b></mark>
+- In style(...), a cell can be text-empty but still meaningful if it contains active or closing tags such as <bg=#eff6ff></bg></u></left>. Count it as a real style cell/row.
+- Never delete or ignore the last style row just because it has no visible text. It may carry styles for the matching data row.
 - <url=goto:Table!List!A1> can be used for external navigation.
 - <url=goto:Table!List!Summary> can be used for external navigation to a mark.
 - <value=Table!List!A1> and <value=Table!List!Summary> are not supported yet unless explicit external value resolver support is implemented.
 - README/documentation examples must be runnable with the current project. Do not show future syntax as working code unless clearly labelled as future/reserved.
+
+Correct multiline style/data overlay:
+
+```python
+preamble = '3,1,1,"#0f172a","solid",0,24'
+style = """style(
+<left><u><bg=#dbeafe><color=#1e3a8a><b></b></color></bg>;
+<bg=#eff6ff></bg>;
+<bg=#eff6ff></bg></u></left>
+)"""
+data = """data(
+<url=goto:Invoice!Items!A4>Open invoice item</url>;
+<url=goto:Report!Sales!A3:D7>Open sales range</url>;
+<url=goto:CRM!Customers!Summary>Open customer summary</url>
+)"""
+model = tentags.compile(preamble, style, data)
+```
+
+The third data row has visible text and a goto link. The third style row has no text, but it is valid because it carries background styling and closes active underline/left tags.
 
 Canonical runnable single-table example:
 
@@ -878,6 +899,8 @@ Self-check before answering:
 - preamble rows == style rows == data rows when style/data are explicit matrices.
 - preamble cols == style cols == data cols when style/data are explicit matrices.
 - For multitable examples, repeat the row/column check separately for every dict in tables[].
+- Count styled-empty cells/rows in style(...). A style row containing only tags, closing tags, or an empty body with styles is still a real row.
+- If a data row contains text such as <url=goto:...>Text</url>, the matching style row must exist even if the style row itself has no visible text.
 - Do not let a table item declare 3 rows in preamble while data(...) contains 4 rows, especially if the extra row contains <mark> or goto targets.
 - All paired tags are properly opened and closed.
 - Single tags such as <mark>, <img>, and <value> are not closed.
