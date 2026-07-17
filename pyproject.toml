@@ -1,0 +1,65 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tentags"
+version = "2.1.0"
+description = "A declarative template language and Intermediate Representation (IR) for automated HTML, Excel, and PDF table/document generation."
+readme = "README.md"
+authors = [
+    { name = "Zhandos Mambetali", email = "zhandos.mambetali@gmail.com" }
+]
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Text Processing :: Markup :: HTML",
+    "Topic :: Office/Business :: Financial :: Spreadsheet",
+]
+keywords = ["html", "excel", "xlsx", "table", "generator", "spreadsheet", "pycells", "tags", "parser"]
+dependencies = []
+requires-python = ">=3.8"
+
+[project.optional-dependencies]
+excel = [
+    "openpyxl>=3.1.0",
+    "et_xmlfile>=2.0.0"
+]
+pdf = [
+    "reportlab>=4.0.0"
+]
+all = [
+    "openpyxl>=3.1.0",
+    "et_xmlfile>=2.0.0",
+    "reportlab>=4.0.0"
+]
+dev = [
+    "openpyxl>=3.1.0",
+    "et_xmlfile>=2.0.0",
+    "reportlab>=4.0.0",
+    "pytest>=7.0.0",
+    "build>=1.0.0",
+    "twine>=4.0.0"
+]
+
+[project.urls]
+Homepage = "https://tentags.org"
+Documentation = "https://tentags.org"
+Repository = "https://github.com/Jandos77/tentags"
+Issues = "https://github.com/Jandos77/tentags/issues"
+
+[tool.setuptools]
+packages = ["tentags", "tentags.addressing", "tentags.contrib", "tentags.templatetags"]
+
+[tool.setuptools.package-data]
+"*" = ["*.md"]
