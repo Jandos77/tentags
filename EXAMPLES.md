@@ -256,6 +256,217 @@ html  = tentags.render(preamble, style, data)
 html2 = tentags.render(preamble, style, 'data(Department Report, , ; Department, Employees, Budget; Marketing, 8, "$200,000")')
 ```
 
+### Serializer API
+
+The Serializer API converts Python structures into TenTags DSL strings. It is not a second compiler and not a mutable object API. The canonical namespace is `tentags.serialize`; top-level `dumps_*` functions remain available as convenience aliases. The canonical path stays:
+
+```text
+Python structures -> tentags.serialize.* -> TenTags DSL -> compile() -> IR -> HTML/PDF/XLSX
+```
+
+```python
+import tentags
+
+records = [
+    {"period": "January", "revenue": 125000, "status": "Closed"},
+    {"period": "July", "revenue": 158900, "status": "Review"},
+]
+
+STATUS_COLORS = {
+    "Closed": {"bg": "#dcfce7", "fg": "#166534"},
+    "Review": {"bg": "#fef3c7", "fg": "#92400e"},
+}
+
+data_rows = [
+    ["<color=#ffffff><b>Period</b></color>", "<right><color=#ffffff><b>Revenue</b></color></right>", "<center><color=#ffffff><b>Status</b></color></center>"],
+]
+style_rows = [
+    ["<bg=#0f172a><b></b></bg>"] * 3,
+]
+
+for index, record in enumerate(records):
+    base_bg = "#ffffff" if index % 2 == 0 else "#f8fafc"
+    status = STATUS_COLORS[record["status"]]
+    style_rows.append([
+        f"<bg={base_bg}></bg>",
+        f"<bg={base_bg}></bg>",
+        f"<bg={status['bg']}></bg>",
+    ])
+    data_rows.append([
+        record["period"],
+        f"<right>{record['revenue']}</right>",
+        f"<center><color={status['fg']}>{record['status']}</color></center>",
+    ])
+
+preamble = tentags.serialize.preamble(len(data_rows), 3, border_color="#64748b", border_style="solid-1", cell_height=28)
+style = tentags.serialize.style(style_rows, expected_rows=len(data_rows), expected_cols=3)
+data = tentags.serialize.data(data_rows, expected_rows=len(data_rows), expected_cols=3)
+
+model = tentags.compile(preamble, style, data)
+html = tentags.render_html(model)
+tentags.render_pdf(model, "serializer_report.pdf")
+tentags.render_xlsx(model, "serializer_report.xlsx")
+```
+
+The same serializer output can be used inside `multitable_*` items:
+
+```python
+dashboard_rows = [
+    ["Section", "Target"],
+    ["Invoice", "<url=goto:Invoice!Items!A1>Open</url>"],
+]
+
+invoice_rows = [
+    ["Item", "Total"],
+    ["Paper", "<url=goto:Dashboard!Menu!A1>$25</url>"],
+]
+
+tables = [
+    {
+        "document": "Dashboard",
+        "table_name": "Menu",
+        "sheet_name": "Menu",
+        "title": "Dashboard Menu",
+        "preamble": tentags.serialize.preamble(len(dashboard_rows), 2, border_color="#64748b", border_style="solid-1", cell_height=24),
+        "style": tentags.serialize.style([["<bg=#dbeafe><b></b></bg>"] * 2, ["<bg=#ffffff></bg>"] * 2]),
+        "data": tentags.serialize.data(dashboard_rows),
+    },
+    {
+        "document": "Invoice",
+        "table_name": "Items",
+        "sheet_name": "Items",
+        "title": "Invoice Items",
+        "preamble": tentags.serialize.preamble(len(invoice_rows), 2, border_color="#64748b", border_style="solid-1", cell_height=24),
+        "style": tentags.serialize.style([["<bg=#ffedd5><b></b></bg>"] * 2, ["<bg=#ffffff></bg>"] * 2]),
+        "data": tentags.serialize.data(invoice_rows),
+    },
+]
+
+html = tentags.multitable_html(tables, settings={
+    "table_order": ["Dashboard!Menu", "Invoice!Items"],
+    "tables_per_row": 2,
+    "layout": "grid",
+    "cols": 2,
+})
+```
+
+### SQLite database serialization
+
+This pattern reads records from a database, builds Python matrices, serializes them to TenTags DSL, and still compiles through the normal `compile(preamble, style, data)` entry point.
+
+```python
+import sqlite3
+import tentags
+
+conn = sqlite3.connect("finance.db")
+conn.row_factory = sqlite3.Row
+records = [
+    dict(row)
+    for row in conn.execute(
+        "SELECT period, revenue, expenses, profit, status FROM monthly_report ORDER BY period"
+    )
+]
+conn.close()
+
+STATUS_COLORS = {
+    "Closed": {"bg": "#dcfce7", "fg": "#166534"},
+    "Review": {"bg": "#fef3c7", "fg": "#92400e"},
+    "Forecast": {"bg": "#dbeafe", "fg": "#1e3a8a"},
+}
+
+data_rows = [[
+    "<color=#ffffff><b>Period</b></color>",
+    "<right><color=#ffffff><b>Revenue</b></color></right>",
+    "<right><color=#ffffff><b>Expenses</b></color></right>",
+    "<right><color=#ffffff><b>Profit</b></color></right>",
+    "<center><color=#ffffff><b>Status</b></color></center>",
+]]
+style_rows = [["<bg=#0f172a><b></b></bg>"] * 5]
+
+for index, record in enumerate(records):
+    base_bg = "#ffffff" if index % 2 == 0 else "#f8fafc"
+    status = STATUS_COLORS[record["status"]]
+    style_rows.append([
+        f"<bg={base_bg}></bg>",
+        f"<bg={base_bg}></bg>",
+        f"<bg={base_bg}></bg>",
+        f"<bg={base_bg}></bg>",
+        f"<bg={status['bg']}></bg>",
+    ])
+    data_rows.append([
+        record["period"],
+        f"<right>{record['revenue']}</right>",
+        f"<right>{record['expenses']}</right>",
+        f"<right><color=#16a34a><b>{record['profit']}</b></color></right>",
+        f"<center><color={status['fg']}>{record['status']}</color></center>",
+    ])
+
+preamble = tentags.serialize.preamble(len(data_rows), 5, border_color="#64748b", border_style="solid-1", cell_height=28)
+style = tentags.serialize.style(style_rows, expected_rows=len(data_rows), expected_cols=5)
+data = tentags.serialize.data(data_rows, expected_rows=len(data_rows), expected_cols=5)
+
+model = tentags.compile(preamble, style, data)
+
+with open("financial_report.html", "w", encoding="utf-8") as f:
+    f.write(tentags.render_html(model))
+
+tentags.render_pdf(model, "financial_report.pdf")
+tentags.render_xlsx(model, "financial_report.xlsx")
+```
+
+For a database-driven multitable report, build one serialized table dictionary per query:
+
+```python
+def table_from_query(conn, document, table_name, sheet_name, title, sql, columns):
+    rows = [list(columns)]
+    rows.extend([list(row) for row in conn.execute(sql)])
+
+    style_rows = [["<bg=#dbeafe><b></b></bg>"] * len(columns)]
+    style_rows.extend([["<bg=#ffffff></bg>"] * len(columns) for _ in rows[1:]])
+
+    return {
+        "document": document,
+        "table_name": table_name,
+        "sheet_name": sheet_name,
+        "title": title,
+        "preamble": tentags.serialize.preamble(len(rows), len(columns), border_color="#64748b", border_style="solid-1", cell_height=24),
+        "style": tentags.serialize.style(style_rows, expected_rows=len(rows), expected_cols=len(columns)),
+        "data": tentags.serialize.data(rows, expected_rows=len(rows), expected_cols=len(columns)),
+    }
+
+conn = sqlite3.connect("business.db")
+
+tables = [
+    table_from_query(
+        conn,
+        "Dashboard",
+        "Menu",
+        "Menu",
+        "Dashboard Menu",
+        "SELECT section, target FROM dashboard_links",
+        ["Section", "Target"],
+    ),
+    table_from_query(
+        conn,
+        "Invoice",
+        "Items",
+        "Items",
+        "Invoice Items",
+        "SELECT item, total FROM invoice_items",
+        ["Item", "Total"],
+    ),
+]
+
+tentags.multitable_html(tables, settings={
+    "output": "db_multitable_report.html",
+    "table_order": ["Dashboard!Menu", "Invoice!Items"],
+    "tables_per_row": 2,
+    "layout": "grid",
+    "cols": 2,
+    "full_page": True,
+})
+```
+
 ### Multitable export settings
 
 Multitable means several separate logical Lists/Tables, not one large grid. Each List has its own `preamble`, `style(...)`, `data(...)`, title, and XLSX sheet name. File output and visual layout are controlled through library-level `settings=...` dictionaries.
@@ -802,7 +1013,7 @@ style    = '''style(
 
 entries = [
     ('<url=https://github.com/tentags>GitHub Repository</url>', 'Open Source', '<color=green>Active</color>'),
-    ('<url=https://pypi.org/project/tentags>PyPI Package</url>', 'v2.0.3',     '<u>Stable</u>'),
+    ('<url=https://pypi.org/project/tentags>PyPI Package</url>', 'v2.1.0',     '<u>Stable</u>'),
     ('<url=https://tentags.readthedocs.io>Documentation</url>',  'Read the Docs', '<color=blue>Online</color>'),
 ]
 rows = '; '.join(f'{link}, {badge}, {status}' for link, badge, status in entries)

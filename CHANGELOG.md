@@ -6,15 +6,22 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [Unreleased]
+## [2.1.0] - 2026-07-17
+
+Serializer API, Addressing Model, and Multitable Layout.
 
 ### Added
+- Added Serializer API namespace: `tentags.serialize.preamble()`, `tentags.serialize.style()`, and `tentags.serialize.data()` for converting Python values and matrices into canonical TenTags DSL.
+- Added compatible top-level aliases: `dumps_preamble()`, `dumps_style()`, and `dumps_data()`.
+- Added explicit Serializer API coverage for `multitable_html()`, `multitable_xlsx()`, and `multitable_pdf()` table items.
+- Added runnable SQLite database serialization examples for single-table and multitable reports.
 - Added library-level multitable export settings dictionaries: `DEFAULT_MULTITABLE_HTML_SETTINGS`, `DEFAULT_MULTITABLE_XLSX_SETTINGS`, and `DEFAULT_MULTITABLE_PDF_SETTINGS`.
 - Added canonical `settings=...` support for multitable HTML, XLSX, and PDF export examples.
 - Added PDF multitable layout controls for `tables_per_row`, `tables_per_row="auto"`, `tables_per_page`, `tables_per_page="auto"`, and `gap`.
 - Added multitable documentation for table ordering and column validation through `table_order` and `columns`.
 
 ### Changed
+- Documented the canonical path `Python structures -> tentags.serialize.* -> TenTags DSL -> compile() -> IR`, keeping `compile(preamble, style, data)` as the single compiler entry point.
 - Updated multitable examples to use named settings dictionaries instead of magic inline parameters.
 - Clarified that multitable means several separate List/Table entries, each with its own preamble, style, and data.
 

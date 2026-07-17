@@ -36,6 +36,12 @@ Main API:
   parse()            Parse formula
   validate()         Validate syntax
 
+Serializer API:
+  serialize          Namespace for preamble/style/data serializers
+  dumps_preamble()   Serialize Python values to a TenTags preamble
+  dumps_style()      Serialize a Python matrix to style(...)
+  dumps_data()       Serialize a Python matrix to data(...)
+
 Export:
   render_html()      Render to HTML string
   render_pdf()       Export to PDF document
@@ -55,17 +61,17 @@ Website: https://tentags.org
 Documentation: https://tentags.org/docs
 GitHub: https://github.com/Jandos77/tentags
 
-Current Version: 2.0.3
+Current Version: 2.1.0
 License: Apache License 2.0
 """
 
-__version__ = "2.0.3"
+__version__ = "2.1.0"
 __author__ = "Zhandos Mambetali"
 __license__ = "Apache-2.0"
 __copyright__ = "Copyright (c) 2026 Zhandos Mambetali"
 __homepage__ = "https://tentags.org"
 __url__ = "https://tentags.org"
-version_info = (2, 0, 3)
+version_info = (2, 1, 0)
 
 __all__ = [
     "__version__",
@@ -81,6 +87,10 @@ __all__ = [
     "render_xlsx",
     "render_pdf",
     "compile",
+    "serialize",
+    "dumps_preamble",
+    "dumps_style",
+    "dumps_data",
     "multitable_html",
     "multitable_xlsx",
     "multitable_pdf",
@@ -156,6 +166,149 @@ DEFAULT_MULTITABLE_PDF_SETTINGS = {
     "page_break_after_each": True,
     "margins": (36, 36, 36, 36),
 }
+
+def _dumps_quoted(value: _Any) -> str:
+    text = str(value)
+    text = text.replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{text}"'
+
+def _require_non_negative_int(value: _Any, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise ValueError(f"{name} must be a non-negative integer.")
+    return value
+
+def _require_positive_int(value: _Any, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise ValueError(f"{name} must be a positive integer.")
+    return value
+
+def dumps_preamble(
+    rows: int,
+    cols: int,
+    border_width: int = 1,
+    border_color: str = "#cbd5e1",
+    border_style: str = "solid",
+    stretch: int = 0,
+    cell_height: int = 30,
+) -> str:
+    """
+    Serializes Python preamble values into canonical TenTags preamble text.
+
+    This is a serializer only. It does not compile or create IR.
+    """
+    rows = _require_positive_int(rows, "rows")
+    cols = _require_positive_int(cols, "cols")
+    border_width = _require_non_negative_int(border_width, "border_width")
+    stretch = _require_non_negative_int(stretch, "stretch")
+    cell_height = _require_non_negative_int(cell_height, "cell_height")
+    return ",".join(
+        [
+            str(rows),
+            str(cols),
+            str(border_width),
+            _dumps_quoted(border_color),
+            _dumps_quoted(border_style),
+            str(stretch),
+            str(cell_height),
+        ]
+    )
+
+def _coerce_serializer_matrix(rows: _Any, name: str) -> list[list[_Any]]:
+    if rows is None or isinstance(rows, (str, bytes)):
+        raise ValueError(f"{name} must be a matrix: a list of rows.")
+    try:
+        row_list = list(rows)
+    except TypeError as exc:
+        raise ValueError(f"{name} must be a matrix: a list of rows.") from exc
+
+    matrix = []
+    for index, row in enumerate(row_list):
+        if row is None or isinstance(row, (str, bytes)):
+            raise ValueError(f"{name} row {index + 1} must be a list of cells.")
+        try:
+            matrix.append(list(row))
+        except TypeError as exc:
+            raise ValueError(f"{name} row {index + 1} must be a list of cells.") from exc
+    return matrix
+
+def _validate_serializer_matrix(
+    matrix: list[list[_Any]],
+    name: str,
+    expected_rows: int = None,
+    expected_cols: int = None,
+) -> None:
+    if expected_rows is not None:
+        _require_non_negative_int(expected_rows, "expected_rows")
+        if len(matrix) != expected_rows:
+            raise ValueError(f"{name} expected {expected_rows} rows, got {len(matrix)}.")
+    if expected_cols is not None:
+        _require_non_negative_int(expected_cols, "expected_cols")
+        for index, row in enumerate(matrix):
+            if len(row) != expected_cols:
+                raise ValueError(
+                    f"{name} row {index + 1} expected {expected_cols} cells, got {len(row)}."
+                )
+
+def _dumps_cell(value: _Any) -> str:
+    if value is None:
+        return ""
+    return str(value)
+
+def _dumps_block(block_name: str, rows: _Any, expected_rows: int = None, expected_cols: int = None) -> str:
+    matrix = _coerce_serializer_matrix(rows, block_name)
+    _validate_serializer_matrix(matrix, block_name, expected_rows, expected_cols)
+    body = ";\n".join(", ".join(_dumps_cell(cell) for cell in row) for row in matrix)
+    return f"{block_name}(\n{body}\n)"
+
+def dumps_style(rows: _Any, expected_rows: int = None, expected_cols: int = None) -> str:
+    """
+    Serializes a Python matrix into a TenTags style(...) block.
+
+    Cell values are raw TenTags style expressions. None becomes an empty cell.
+    """
+    return _dumps_block("style", rows, expected_rows, expected_cols)
+
+def dumps_data(rows: _Any, expected_rows: int = None, expected_cols: int = None) -> str:
+    """
+    Serializes a Python matrix into a TenTags data(...) block.
+
+    Cell values are raw TenTags data expressions. None becomes an empty cell.
+    """
+    return _dumps_block("data", rows, expected_rows, expected_cols)
+
+class _SerializeNamespace:
+    """
+    Namespace for serializers that convert Python structures to TenTags DSL.
+    """
+    @staticmethod
+    def preamble(
+        rows: int,
+        cols: int,
+        border_width: int = 1,
+        border_color: str = "#cbd5e1",
+        border_style: str = "solid",
+        stretch: int = 0,
+        cell_height: int = 30,
+    ) -> str:
+        return dumps_preamble(
+            rows=rows,
+            cols=cols,
+            border_width=border_width,
+            border_color=border_color,
+            border_style=border_style,
+            stretch=stretch,
+            cell_height=cell_height,
+        )
+
+    @staticmethod
+    def style(rows: _Any, expected_rows: int = None, expected_cols: int = None) -> str:
+        return dumps_style(rows, expected_rows=expected_rows, expected_cols=expected_cols)
+
+    @staticmethod
+    def data(rows: _Any, expected_rows: int = None, expected_cols: int = None) -> str:
+        return dumps_data(rows, expected_rows=expected_rows, expected_cols=expected_cols)
+
+serialize = _SerializeNamespace()
 
 class _TokenType(_Enum):
     TAG_OPEN = _auto()

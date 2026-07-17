@@ -12,6 +12,10 @@
 
 **TenTags** is a declarative template language and **Intermediate Representation (IR)** for automated **HTML**, **Excel (`.xlsx`)**, and **PDF** table and document generation.
 
+### 🚀 Current Release: 2.1.0
+
+**TenTags 2.1.0** adds Serializer API, Addressing Model, and Multitable Layout as a backward-compatible minor release.
+
 ### 💡 Why TenTags? (A Language for Programs & AI, Not Manual Editing)
 
 While general markup formats are designed for *humans* to manually write text, **TenTags** is designed specifically as a **Template DSL for programs, server engines, and AI agents**.
@@ -269,8 +273,8 @@ tentags.render_pdf(model, "Enterprise_Budget_Matrix.pdf")
 ## 🛠️ API Reference
 
 ### Module Constants & Metadata
-- **`tentags.__version__`**: Library version string (e.g., `'2.0.3'`).
-- **`tentags.version_info`**: Version tuple for checking compatibility (e.g., `(2, 0, 3)`).
+- **`tentags.__version__`**: Library version string (e.g., `'2.1.0'`).
+- **`tentags.version_info`**: Version tuple for checking compatibility (e.g., `(2, 1, 0)`).
 - **`tentags.__author__`**: Author name (`'Zhandos Mambetali'`).
 - **`tentags.__license__`**: Project license (`'Apache-2.0'`).
 - **`tentags.__homepage__`**: Link to home website (`'https://tentags.org'`).
@@ -320,6 +324,76 @@ Parses the formula into a structured `TableModel` instance containing 2D cell gr
 ### `tentags.compile(preamble, style, data, context: dict = None) -> TableModel`
 Builds a `TableModel` from decoupled preamble, style, and data blocks. Each block may be a TenTags string or a parsed cell grid.
 
+### Serializer API
+
+The Serializer API converts ordinary Python structures into canonical TenTags DSL strings. It does not create IR and it does not replace the DSL: `compile(preamble, style, data)` remains the only compiler entry point.
+
+The canonical namespace is `tentags.serialize`. Top-level `dumps_preamble()`, `dumps_style()`, and `dumps_data()` remain available as compatible convenience aliases.
+
+```python
+import tentags
+
+rows = [
+    ["Period", "<right>Revenue</right>", "<center>Status</center>"],
+    ["January", "<right>125000</right>", "<center>Closed</center>"],
+    ["July", "<right>158900</right>", "<center>Review</center>"],
+]
+
+style_rows = [
+    ["<bg=#0f172a><color=#ffffff><b></b></color></bg>"] * 3,
+    ["<bg=#ffffff></bg>", "<bg=#ffffff></bg>", "<bg=#dcfce7></bg>"],
+    ["<bg=#f8fafc></bg>", "<bg=#f8fafc></bg>", "<bg=#fef3c7></bg>"],
+]
+
+preamble = tentags.serialize.preamble(len(rows), 3, border_color="#64748b", border_style="solid-1", cell_height=28)
+style = tentags.serialize.style(style_rows, expected_rows=len(rows), expected_cols=3)
+data = tentags.serialize.data(rows, expected_rows=len(rows), expected_cols=3)
+
+model = tentags.compile(preamble, style, data)
+```
+
+The same serializer pattern is useful for database-backed reports:
+
+```python
+import sqlite3
+import tentags
+
+conn = sqlite3.connect("finance.db")
+conn.row_factory = sqlite3.Row
+records = [dict(row) for row in conn.execute("SELECT period, revenue, status FROM monthly_report")]
+conn.close()
+
+data_rows = [["Period", "<right>Revenue</right>", "<center>Status</center>"]]
+style_rows = [["<bg=#0f172a><color=#ffffff><b></b></color></bg>"] * 3]
+
+for index, record in enumerate(records):
+    base_bg = "#ffffff" if index % 2 == 0 else "#f8fafc"
+    data_rows.append([
+        record["period"],
+        f"<right>{record['revenue']}</right>",
+        f"<center>{record['status']}</center>",
+    ])
+    style_rows.append([f"<bg={base_bg}></bg>"] * 3)
+
+preamble = tentags.serialize.preamble(len(data_rows), 3, border_color="#64748b", border_style="solid-1", cell_height=28)
+style = tentags.serialize.style(style_rows, expected_rows=len(data_rows), expected_cols=3)
+data = tentags.serialize.data(data_rows, expected_rows=len(data_rows), expected_cols=3)
+model = tentags.compile(preamble, style, data)
+```
+
+#### `tentags.serialize.preamble(rows, cols, border_width=1, border_color="#cbd5e1", border_style="solid", stretch=0, cell_height=30) -> str`
+Serializes Python preamble values into a TenTags preamble string such as:
+
+```python
+'9,5,1,"#64748b","solid-1",0,28'
+```
+
+#### `tentags.serialize.style(rows, expected_rows=None, expected_cols=None) -> str`
+Serializes a Python matrix into `style(...)`. Cell values are raw TenTags style expressions; `None` becomes an empty cell.
+
+#### `tentags.serialize.data(rows, expected_rows=None, expected_cols=None) -> str`
+Serializes a Python matrix into `data(...)`. Cell values are raw TenTags data expressions; `None` becomes an empty cell.
+
 ### `tentags.render_html(model: TableModel) -> str`
 Renders a previously parsed `TableModel` instance into an HTML string.
 
@@ -351,8 +425,20 @@ table_definition = {
 
 Use named export settings for file output, table order, column validation, and renderer layout. These settings are part of the library API and are passed with `settings=...`.
 
+The Serializer API also works inside multitable items. Each table dictionary can receive `preamble`, `style`, and `data` generated by `tentags.serialize.preamble()`, `tentags.serialize.style()`, and `tentags.serialize.data()`.
+
 ```python
 import tentags
+
+menu_rows = [
+    ["<mark=Top>Section", "Link"],
+    ["Invoice", "<url=goto:Invoice!Items!A1>Open invoice</url>"],
+]
+
+menu_style = [
+    ["<bg=#dbeafe><b></b></bg>", "<bg=#dbeafe><b></b></bg>"],
+    ["<bg=#eff6ff></bg>", "<bg=#eff6ff></bg>"],
+]
 
 tables = [
     {
@@ -360,9 +446,9 @@ tables = [
         "table_name": "Menu",
         "sheet_name": "Menu",
         "title": "Dashboard Menu",
-        "preamble": '2,2,1,"#0f172a","solid",0,24',
-        "style": "style(<bg=#dbeafe><b></b></bg>, <bg=#dbeafe><b></b></bg>; <bg=#eff6ff></bg>, <bg=#eff6ff></bg>)",
-        "data": "data(<mark=Top>Section, Link; Invoice, <url=goto:Invoice!Items!A1>Open invoice</url>)",
+        "preamble": tentags.serialize.preamble(len(menu_rows), 2, border_color="#0f172a", border_style="solid", cell_height=24),
+        "style": tentags.serialize.style(menu_style, expected_rows=len(menu_rows), expected_cols=2),
+        "data": tentags.serialize.data(menu_rows, expected_rows=len(menu_rows), expected_cols=2),
     },
     {
         "document": "Invoice",

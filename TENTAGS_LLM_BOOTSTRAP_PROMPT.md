@@ -1,4 +1,4 @@
-﻿# TenTags LLM Bootstrap Prompt
+# TenTags LLM Bootstrap Prompt
 
 Use this prompt to bootstrap an LLM that does not know TenTags.
 
@@ -49,7 +49,7 @@ Public API stability:
 - Preserve old behavior unless the user explicitly asks for a breaking change.
 
 Current version:
-TenTags is currently 2.0.3. Do not change it unless asked.
+TenTags is currently 2.1.0. Do not change version metadata unless explicitly asked.
 
 Architecture:
 TenTags defines a logical document model and a declarative language for constructing it.
@@ -134,6 +134,212 @@ Alice, 100;
 )"""
 model = tentags.compile(preamble, style, data)
 html = tentags.render_html(model)
+
+Serializer API:
+
+TenTags provides small serializer functions that convert Python structures into TenTags DSL:
+
+- tentags.serialize.preamble(...)
+- tentags.serialize.style(...)
+- tentags.serialize.data(...)
+
+These functions are not a second compiler and not a mutable object API.
+They only serialize Python values to canonical DSL strings.
+They can be used for single tables and inside every dict item passed to multitable_html(), multitable_xlsx(), or multitable_pdf().
+Top-level dumps_preamble(), dumps_style(), and dumps_data() are convenience aliases; prefer tentags.serialize.* in new examples.
+
+Canonical path:
+
+Python structures
+-> tentags.serialize.preamble(), tentags.serialize.style(), tentags.serialize.data()
+-> TenTags DSL
+-> compile(preamble, style, data)
+-> IR
+-> HTML/PDF/XLSX
+
+Multitable serializer pattern:
+
+```python
+rows = [
+    ["Section", "Target"],
+    ["Invoice", "<url=goto:Invoice!Items!A1>Open</url>"],
+]
+
+table_item = {
+    "document": "Dashboard",
+    "table_name": "Menu",
+    "sheet_name": "Menu",
+    "title": "Dashboard Menu",
+    "preamble": tentags.serialize.preamble(len(rows), 2, border_color="#64748b", border_style="solid-1", cell_height=24),
+    "style": tentags.serialize.style(
+        [["<bg=#dbeafe><b></b></bg>"] * 2, ["<bg=#ffffff></bg>"] * 2],
+        expected_rows=len(rows),
+        expected_cols=2,
+    ),
+    "data": tentags.serialize.data(rows, expected_rows=len(rows), expected_cols=2),
+}
+```
+
+Database serialization pattern:
+
+When data comes from a DB, query rows into dictionaries or tuples first, then build list[list] matrices.
+Do not write SQL output directly into TenTags strings by concatenation.
+
+```python
+import sqlite3
+import tentags
+
+conn = sqlite3.connect("finance.db")
+conn.row_factory = sqlite3.Row
+records = [
+    dict(row)
+    for row in conn.execute(
+        "SELECT period, revenue, expenses, profit, status FROM monthly_report ORDER BY rowid"
+    )
+]
+conn.close()
+
+STATUS_COLORS = {
+    "Closed": {"bg": "#dcfce7", "fg": "#166534"},
+    "Review": {"bg": "#fef3c7", "fg": "#92400e"},
+    "Forecast": {"bg": "#dbeafe", "fg": "#1e3a8a"},
+}
+
+data_rows = [[
+    "<color=#ffffff><b>Period</b></color>",
+    "<right><color=#ffffff><b>Revenue</b></color></right>",
+    "<right><color=#ffffff><b>Expenses</b></color></right>",
+    "<right><color=#ffffff><b>Profit</b></color></right>",
+    "<center><color=#ffffff><b>Status</b></color></center>",
+]]
+style_rows = [["<bg=#0f172a><b></b></bg>"] * 5]
+
+for index, record in enumerate(records):
+    base_bg = "#ffffff" if index % 2 == 0 else "#f8fafc"
+    status = STATUS_COLORS[record["status"]]
+    style_rows.append([
+        f"<bg={base_bg}></bg>",
+        f"<bg={base_bg}></bg>",
+        f"<bg={base_bg}></bg>",
+        f"<bg={base_bg}></bg>",
+        f"<bg={status['bg']}></bg>",
+    ])
+    data_rows.append([
+        record["period"],
+        f"<right>{record['revenue']}</right>",
+        f"<right>{record['expenses']}</right>",
+        f"<right><color=#16a34a><b>{record['profit']}</b></color></right>",
+        f"<center><color={status['fg']}>{record['status']}</color></center>",
+    ])
+
+preamble = tentags.serialize.preamble(len(data_rows), 5, border_color="#64748b", border_style="solid-1", cell_height=28)
+style = tentags.serialize.style(style_rows, expected_rows=len(data_rows), expected_cols=5)
+data = tentags.serialize.data(data_rows, expected_rows=len(data_rows), expected_cols=5)
+model = tentags.compile(preamble, style, data)
+```
+
+For DB-driven multitable exports, run one query per logical Table/List and serialize each result into its own table item.
+
+Canonical dynamic table generation from records:
+
+Use this pattern when data comes from a database, CSV, API, or any list of records.
+Python builds ordinary list[list] matrices first, then the Serializer API converts them to TenTags DSL.
+Business logic stays in Python; document structure and presentation stay in TenTags.
+
+Important:
+- Compute preamble rows from the number of records.
+- Keep colors and business mappings in one Python dictionary.
+- Generate style_rows and data_rows with the same row count.
+- Use tentags.serialize.style(...) and tentags.serialize.data(...) instead of manual string concatenation when possible.
+- Put cell backgrounds in style(...), not data(...).
+- Put text, values, alignment, links, marks, and inline text color in data(...).
+- Always compile through compile(preamble, style, data). Do not invent compile_lists() or TTTable().
+- Render the same compiled model to HTML, PDF, and XLSX.
+
+```python
+import tentags
+
+rows_from_db = [
+    {"period": "January", "revenue": 125000, "expenses": 82000, "profit": 43000, "status": "Closed"},
+    {"period": "February", "revenue": 132500, "expenses": 87500, "profit": 45000, "status": "Closed"},
+    {"period": "March", "revenue": 141200, "expenses": 91300, "profit": 49900, "status": "Closed"},
+    {"period": "April", "revenue": 138000, "expenses": 94500, "profit": 43500, "status": "Closed"},
+    {"period": "May", "revenue": 152400, "expenses": 98200, "profit": 54200, "status": "Closed"},
+    {"period": "June", "revenue": 160750, "expenses": 104300, "profit": 56450, "status": "Closed"},
+    {"period": "July", "revenue": 158900, "expenses": 109100, "profit": 49800, "status": "Review"},
+    {"period": "August", "revenue": 171300, "expenses": 112800, "profit": 58500, "status": "Forecast"},
+]
+
+STATUS_COLORS = {
+    "Closed": {"bg": "#dcfce7", "fg": "#166534"},
+    "Review": {"bg": "#fef3c7", "fg": "#92400e"},
+    "Forecast": {"bg": "#dbeafe", "fg": "#1e3a8a"},
+}
+
+data_rows = [
+    [
+        "<color=#ffffff><b>Period</b></color>",
+        "<right><color=#ffffff><b>Revenue</b></color></right>",
+        "<right><color=#ffffff><b>Expenses</b></color></right>",
+        "<right><color=#ffffff><b>Profit</b></color></right>",
+        "<center><color=#ffffff><b>Status</b></color></center>",
+    ],
+]
+
+style_rows = [
+    ["<bg=#0f172a><b></b></bg>"] * 5,
+]
+
+for index, row in enumerate(rows_from_db):
+    base_bg = "#ffffff" if index % 2 == 0 else "#f8fafc"
+    status = STATUS_COLORS[row["status"]]
+    style_rows.append(
+        [
+            f"<bg={base_bg}></bg>",
+            f"<bg={base_bg}></bg>",
+            f"<bg={base_bg}></bg>",
+            f"<bg={base_bg}></bg>",
+            f"<bg={status['bg']}></bg>",
+        ]
+    )
+    data_rows.append(
+        [
+            row["period"],
+            f'<right>{row["revenue"]}</right>',
+            f'<right>{row["expenses"]}</right>',
+            f'<right><color=#16a34a><b>{row["profit"]}</b></color></right>',
+            f'<center><color={status["fg"]}>{row["status"]}</color></center>',
+        ]
+    )
+
+preamble = tentags.serialize.preamble(
+    len(data_rows),
+    5,
+    border_color="#64748b",
+    border_style="solid-1",
+    cell_height=28,
+)
+style = tentags.serialize.style(style_rows, expected_rows=len(data_rows), expected_cols=5)
+data = tentags.serialize.data(data_rows, expected_rows=len(data_rows), expected_cols=5)
+
+model = tentags.compile(preamble, style, data)
+
+with open("financial_report.html", "w", encoding="utf-8") as f:
+    f.write(tentags.render_html(model))
+
+tentags.render_pdf(model, "financial_report.pdf")
+tentags.render_xlsx(model, "financial_report.xlsx")
+
+print("Generated: financial_report.html, financial_report.xlsx, financial_report.pdf")
+```
+
+Useful style-spread pattern:
+
+```text
+<bg=#ffffff>, , , </bg>, <bg=#dcfce7></bg>
+```
+
+This styles the first four cells with the same row background and gives the fifth cell a separate status background.
 
 Negative examples:
 - Invalid: <mark=Summary></mark>
@@ -621,6 +827,10 @@ Coding conventions:
 - Always preserve old URL behavior for non-goto URLs.
 - Duplicate marks must raise DuplicateMarkError.
 - Multitable export settings belong to the library API. Tests should call settings=... and verify output; they must not implement their own ordering, column validation, output routing, or renderer-kwarg filtering.
+- Serializer API is tentags.serialize.preamble(), tentags.serialize.style(), and tentags.serialize.data(). It serializes Python structures to DSL only.
+- Top-level dumps_preamble(), dumps_style(), and dumps_data() are compatible aliases, not a separate layer.
+- Do not invent TTTable, mutable table objects, compile_lists(), compile_from_lists(), or any second compiler path unless explicitly requested.
+- DSL remains the only compiler input: compile(preamble, style, data).
 
 Self-check before answering:
 - preamble rows == style rows == data rows when style/data are explicit matrices.
