@@ -165,6 +165,15 @@ def test_html_alignment_and_font_size():
     assert "text-align:center;" in html
     assert "text-align:right;" in html
 
+def test_html_default_alignment_matches_pdf_and_xlsx():
+    expr = '1,2,1,"#000","solid",0,40, data(Plain, <right>Right</right>)'
+    html = tentags.render(expr)
+
+    assert "Plain</td>" in html
+    assert "text-align:center;" in html
+    assert "text-align:right;" in html
+    assert "vertical-align:middle;" in html
+
 def test_html_unclosed_tag_error():
     # Test error when tag is not closed properly
     expr = '1,1,1,"#000","solid",0,30, data(<b>Unclosed)'

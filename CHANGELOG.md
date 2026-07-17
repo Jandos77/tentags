@@ -6,6 +6,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.1.2] - 2026-07-17
+
+### Fixed
+- Aligned HTML default cell alignment with PDF/XLSX by emitting centered horizontal alignment and middle vertical alignment when no explicit alignment tag is used.
+- Allowed XLSX multitable stacked export to accept shared string gap settings such as `"1px"` without raising type errors.
+
+---
+
 ## [2.1.1] - 2026-07-17
 
 ### Fixed

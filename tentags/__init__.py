@@ -62,17 +62,17 @@ Website: https://tentags.org
 Documentation: https://tentags.org/docs
 GitHub: https://github.com/Jandos77/tentags
 
-Current Version: 2.1.1
+Current Version: 2.1.2
 License: Apache License 2.0
 """
 
-__version__ = "2.1.1"
+__version__ = "2.1.2"
 __author__ = "Zhandos Mambetali"
 __license__ = "Apache-2.0"
 __copyright__ = "Copyright (c) 2026 Zhandos Mambetali"
 __homepage__ = "https://tentags.org"
 __url__ = "https://tentags.org"
-version_info = (2, 1, 1)
+version_info = (2, 1, 2)
 
 __all__ = [
     "__version__",
@@ -686,6 +686,23 @@ def _xlsx_settings(defaults: dict, settings: dict = None, overrides: dict = None
     merged = _merge_settings(defaults, settings, overrides)
     tables_per_sheet = merged.get("tables_per_sheet")
     mode = str(merged.get("mode", "sheets")).lower()
+    gap = merged.get("gap")
+    if isinstance(gap, str):
+        normalized_gap = gap.strip().lower()
+        if normalized_gap.endswith(("px", "pt")):
+            normalized_gap = normalized_gap[:-2].strip()
+        try:
+            numeric_gap = float(normalized_gap)
+        except ValueError:
+            raise ValueError('XLSX gap must be a non-negative integer, or a string like "3", "3px", or "3pt".')
+        if not numeric_gap.is_integer():
+            raise ValueError('XLSX gap must be a non-negative integer, or a string like "3", "3px", or "3pt".')
+        gap = int(numeric_gap)
+        merged["gap"] = gap
+    elif gap is not None and not isinstance(gap, int):
+        raise ValueError('XLSX gap must be a non-negative integer, or a string like "3", "3px", or "3pt".')
+    if gap is not None and gap < 0:
+        raise ValueError("XLSX gap must be greater than or equal to 0.")
     if tables_per_sheet is not None:
         if mode == "sheets" and tables_per_sheet not in (1, "one", "one_per_sheet"):
             raise ValueError('XLSX mode="sheets" supports tables_per_sheet=1.')
@@ -1572,6 +1589,7 @@ def render_html(
             link = None
             mark = None
             images = []
+            cell_styles = {}
             border_overrides = []
 
             if r < len(model.cells) and c < len(model.cells[r]):
@@ -1582,6 +1600,7 @@ def render_html(
                 images = cell.images
                 link = cell.link
                 mark = cell.mark
+                cell_styles = cell.styles
                 
                 if cell.border_flags & BorderFlags.HIDE_LEFT:
                     border_overrides.append("border-left:none;")
@@ -1601,6 +1620,10 @@ def render_html(
 
                 if link is not None:
                     href = _link_to_html_href(link, resolver, current_target)
+
+            if "text-align" not in cell_styles:
+                border_overrides.append("text-align:center;")
+            border_overrides.append("vertical-align:middle;")
 
             overrides_css = "".join(border_overrides)
             td_style = f"{td_border}padding:0;{overrides_css}"

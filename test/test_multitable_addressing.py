@@ -191,6 +191,27 @@ def test_multitable_xlsx_format_settings_are_preserved():
     assert ws["A3"].hyperlink.target == "#Report!A19"
 
 
+def test_multitable_xlsx_stacked_accepts_shared_string_gap_setting():
+    openpyxl = pytest.importorskip("openpyxl")
+    output = demo_output_path("multitable_stacked_string_gap.xlsx")
+
+    tentags.multitable_xlsx(
+        _multitable_address_tables()[:2],
+        output,
+        settings={
+            "mode": "stacked",
+            "gap": "1px",
+            "show_titles": True,
+        },
+    )
+
+    wb = openpyxl.load_workbook(output)
+    ws = wb["Report"]
+
+    assert ws["A1"].value == "Navigation Links"
+    assert ws["A6"].value == "Invoice Items"
+
+
 def test_multitable_pdf_format_settings_are_preserved():
     _, _, pdf_output = build_multitable_format_option_artifacts()
 

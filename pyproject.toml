@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tentags"
-version = "2.1.1"
+version = "2.1.2"
 description = "A declarative template language and Intermediate Representation (IR) for automated HTML, Excel, and PDF table/document generation."
 readme = "README.md"
 authors = [

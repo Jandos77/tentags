@@ -12,9 +12,9 @@
 
 **TenTags** is a declarative template language and **Intermediate Representation (IR)** for automated **HTML**, **Excel (`.xlsx`)**, and **PDF** table and document generation.
 
-### 🚀 Current Release: 2.1.1
+### 🚀 Current Release: 2.1.2
 
-**TenTags 2.1.1** is a bugfix release for multitable PDF layout settings, preserving the Serializer API, Addressing Model, and Multitable Layout introduced in 2.1.0.
+**TenTags 2.1.2** is a bugfix release that keeps HTML, PDF, and XLSX table alignment behavior consistent, preserving the Serializer API, Addressing Model, and Multitable Layout introduced in 2.1.0.
 
 ### 💡 Why TenTags? (A Language for Programs & AI, Not Manual Editing)
 
@@ -283,8 +283,8 @@ tentags.render_pdf(model, "Enterprise_Budget_Matrix.pdf")
 ## 🛠️ API Reference
 
 ### Module Constants & Metadata
-- **`tentags.__version__`**: Library version string (e.g., `'2.1.1'`).
-- **`tentags.version_info`**: Version tuple for checking compatibility (e.g., `(2, 1, 1)`).
+- **`tentags.__version__`**: Library version string (e.g., `'2.1.2'`).
+- **`tentags.version_info`**: Version tuple for checking compatibility (e.g., `(2, 1, 2)`).
 - **`tentags.__author__`**: Author name (`'Zhandos Mambetali'`).
 - **`tentags.__license__`**: Project license (`'Apache-2.0'`).
 - **`tentags.__homepage__`**: Link to home website (`'https://tentags.org'`).
