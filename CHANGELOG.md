@@ -6,6 +6,20 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased]
+
+### Added
+- Added library-level multitable export settings dictionaries: `DEFAULT_MULTITABLE_HTML_SETTINGS`, `DEFAULT_MULTITABLE_XLSX_SETTINGS`, and `DEFAULT_MULTITABLE_PDF_SETTINGS`.
+- Added canonical `settings=...` support for multitable HTML, XLSX, and PDF export examples.
+- Added PDF multitable layout controls for `tables_per_row`, `tables_per_row="auto"`, `tables_per_page`, `tables_per_page="auto"`, and `gap`.
+- Added multitable documentation for table ordering and column validation through `table_order` and `columns`.
+
+### Changed
+- Updated multitable examples to use named settings dictionaries instead of magic inline parameters.
+- Clarified that multitable means several separate List/Table entries, each with its own preamble, style, and data.
+
+---
+
 ## [2.0.3] - 2026-07-16
 
 ### Added

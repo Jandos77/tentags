@@ -84,10 +84,18 @@ __all__ = [
     "multitable_html",
     "multitable_xlsx",
     "multitable_pdf",
+    "DEFAULT_MULTITABLE_HTML_SETTINGS",
+    "DEFAULT_MULTITABLE_XLSX_SETTINGS",
+    "DEFAULT_MULTITABLE_PDF_SETTINGS",
     "features",
     "info",
     "validate",
     "demo",
+    "build_mark_index",
+    "AddressContext",
+    "AddressResolver",
+    "AddressTarget",
+    "ResolvedAddress",
     "TableModel",
     "CellDesc",
     "BorderFlags"
@@ -102,6 +110,52 @@ import html as _html
 from typing import Union as _Union, Any as _Any, Optional as _Optional, Dict as _Dict, List as _List
 from enum import Enum as _Enum, auto as _auto
 from dataclasses import dataclass as _dataclass
+from tentags.addressing import AddressType as _AddressType
+from tentags.addressing import AddressContext
+from tentags.addressing import AddressResolver
+from tentags.addressing import AddressTarget
+from tentags.addressing import column_to_name as _column_to_name
+from tentags.addressing import DuplicateMarkError as _DuplicateMarkError
+from tentags.addressing import parse_address as _parse_address
+from tentags.addressing import ResolvedAddress
+
+_SENTINEL = object()
+
+DEFAULT_MULTITABLE_HTML_SETTINGS = {
+    "output": None,
+    "table_order": None,
+    "columns": None,
+    "tables_per_row": None,
+    "html_title": "Multi-Table Report",
+    "layout": "vertical",
+    "cols": 1,
+    "gap": "24px",
+    "full_page": False,
+}
+
+DEFAULT_MULTITABLE_XLSX_SETTINGS = {
+    "output": None,
+    "table_order": None,
+    "columns": None,
+    "tables_per_sheet": None,
+    "stacked_sheet_name": "Report",
+    "mode": "sheets",
+    "gap": 3,
+    "show_titles": True,
+}
+
+DEFAULT_MULTITABLE_PDF_SETTINGS = {
+    "output": None,
+    "table_order": None,
+    "columns": None,
+    "tables_per_row": 1,
+    "tables_per_page": None,
+    "gap": 12,
+    "page_size": "letter",
+    "orientation": "portrait",
+    "page_break_after_each": True,
+    "margins": (36, 36, 36, 36),
+}
 
 class _TokenType(_Enum):
     TAG_OPEN = _auto()
@@ -119,6 +173,12 @@ class _Token:
     column: int
     attr: str = None  # optional attribute value (e.g. tag parameter in <tag=value>)
 
+@_dataclass
+class _Link:
+    scheme: str
+    target: _Any
+    raw: str
+
 class BorderFlags:
     NONE = 0
     HIDE_LEFT = 1
@@ -134,7 +194,212 @@ class CellDesc:
         self.border_flags = BorderFlags.NONE
         self.text_parts = []
         self.images = []
+        self.link = None
+        self.mark = None
+        self.value_refs = []
         self.styles = {}  # Extensible styles, e.g. {'font-weight': 'bold', 'color': '#ff0000'}
+
+def _is_self_tag(tag_name: str) -> bool:
+    return tag_name.lower() in ('img', 'mark', 'value')
+
+def _parse_link(attr: str) -> _Link:
+    raw = str(attr or "").strip()
+    if raw.lower().startswith("goto:"):
+        target = _parse_address(raw[5:].strip())
+        return _Link(scheme="goto", target=target, raw=raw)
+
+    scheme_match = _re.match(r"^([A-Za-z][A-Za-z0-9+.-]*):", raw)
+    scheme = scheme_match.group(1).lower() if scheme_match else "url"
+    return _Link(scheme=scheme, target=raw, raw=raw)
+
+def _html_cell_id(row: int, col: int, prefix: str = None) -> str:
+    cell_name = f"{_column_to_name(col)}{row + 1}"
+    return f"tt-{prefix}-{cell_name}" if prefix else f"tt-{cell_name}"
+
+def _html_mark_id(mark: str, prefix: str = None) -> str:
+    safe = _re.sub(r"[^A-Za-z0-9_.:-]+", "-", str(mark).strip())
+    safe = safe.strip("-") or "mark"
+    return f"tt-{prefix}-mark-{safe}" if prefix else f"tt-mark-{safe}"
+
+def _make_address_target(
+    model: "TableModel",
+    *,
+    project: str = None,
+    document: str = None,
+    table: str = None,
+    sheet: str = None,
+    list_name: str = None,
+    html_prefix: str = None,
+    xlsx_sheet_name: str = "Table",
+    xlsx_start_row: int = 1,
+    pdf_prefix: str = None,
+) -> AddressTarget:
+    return AddressTarget(
+        model=model,
+        context=AddressContext(project=project, document=document, table=table, sheet=sheet, list_name=list_name),
+        html_prefix=html_prefix,
+        xlsx_sheet_name=xlsx_sheet_name,
+        xlsx_start_row=xlsx_start_row,
+        pdf_prefix=pdf_prefix,
+    )
+
+def _local_address_resolver(current: AddressTarget) -> AddressResolver:
+    return AddressResolver([current])
+
+def _address_to_html_href(
+    address,
+    resolver: AddressResolver = None,
+    current: AddressTarget = None,
+    prefix_attr: str = "html_prefix",
+) -> str:
+    resolved = resolver.resolve(address, current) if resolver is not None else None
+    if resolved is not None:
+        cell = resolved.start_cell()
+        prefix = getattr(resolved.target, prefix_attr)
+        if address.location.type is _AddressType.MARK:
+            return f"#{_html_mark_id(address.location.mark, prefix)}"
+        if cell is not None:
+            return f"#{_html_cell_id(cell.row, cell.col, prefix)}"
+        return "#"
+
+    location = address.location
+    if location.type is _AddressType.CELL:
+        return f"#{_html_cell_id(location.cell.row, location.cell.col)}"
+    if location.type is _AddressType.RANGE:
+        return f"#{_html_cell_id(location.range.start.row, location.range.start.col)}"
+    if location.type is _AddressType.MARK:
+        return f"#{_html_mark_id(location.mark)}"
+    return "#"
+
+def _link_to_html_href(
+    link: _Link,
+    resolver: AddressResolver = None,
+    current: AddressTarget = None,
+    prefix_attr: str = "html_prefix",
+) -> str:
+    if link.scheme == "goto":
+        return _address_to_html_href(link.target, resolver, current, prefix_attr)
+    return str(link.target)
+
+def _xlsx_sheet_ref(sheet_name: str) -> str:
+    if _re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", sheet_name):
+        return sheet_name
+    return "'" + sheet_name.replace("'", "''") + "'"
+
+def _address_to_xlsx_hyperlink(
+    address,
+    sheet_name: str,
+    mark_index: dict = None,
+    resolver: AddressResolver = None,
+    current: AddressTarget = None,
+) -> str:
+    resolved = resolver.resolve(address, current) if resolver is not None else None
+    if resolved is not None:
+        cell = resolved.start_cell()
+        if cell is None:
+            return None
+        target_sheet = resolved.target.xlsx_sheet_name or sheet_name
+        row = cell.row + max(1, resolved.target.xlsx_start_row)
+        cell_name = f"{_column_to_name(cell.col)}{row}"
+        return f"#{_xlsx_sheet_ref(target_sheet)}!{cell_name}"
+
+    location = address.location
+    if location.type is _AddressType.CELL:
+        cell_name = f"{_column_to_name(location.cell.col)}{location.cell.row + 1}"
+        return f"#{_xlsx_sheet_ref(sheet_name)}!{cell_name}"
+    if location.type is _AddressType.RANGE:
+        cell = location.range.start
+        cell_name = f"{_column_to_name(cell.col)}{cell.row + 1}"
+        return f"#{_xlsx_sheet_ref(sheet_name)}!{cell_name}"
+    if location.type is _AddressType.MARK and mark_index:
+        coords = mark_index.get(location.mark)
+        if coords is not None:
+            return f"#{_xlsx_sheet_ref(sheet_name)}!{_column_to_name(coords[1])}{coords[0] + 1}"
+    return None
+
+def _link_to_xlsx_hyperlink(
+    link: _Link,
+    sheet_name: str,
+    mark_index: dict = None,
+    resolver: AddressResolver = None,
+    current: AddressTarget = None,
+) -> str:
+    if link.scheme == "goto":
+        return _address_to_xlsx_hyperlink(link.target, sheet_name, mark_index, resolver, current)
+    return str(link.target)
+
+def build_mark_index(model: "TableModel") -> dict:
+    marks = {}
+    for row_index, row in enumerate(model.cells):
+        for col_index, cell in enumerate(row):
+            if not getattr(cell, "mark", None):
+                continue
+            mark = str(cell.mark)
+            if mark in marks:
+                raise _DuplicateMarkError(f"Duplicate mark: {mark}")
+            marks[mark] = (row_index, col_index)
+    return marks
+
+def _has_external_scope(address) -> bool:
+    return bool(address.project or address.document or address.table)
+
+def _cell_value_at(model: "TableModel", row: int, col: int) -> str:
+    if row < 0 or col < 0:
+        return ""
+    if row >= len(model.cells) or col >= len(model.cells[row]):
+        return ""
+    value = model.cells[row][col].raw_expr
+    return "" if value == "None" else str(value)
+
+def _resolve_value_address(model: "TableModel", address, mark_index: dict = None) -> str:
+    if _has_external_scope(address):
+        raise ValueError("External <value=...> addresses are not supported yet.")
+
+    location = address.location
+    if location.type is _AddressType.CELL:
+        return _cell_value_at(model, location.cell.row, location.cell.col)
+
+    if location.type is _AddressType.RANGE:
+        values = [
+            _cell_value_at(model, cell.row, cell.col)
+            for cell in location.range.iter_cells()
+        ]
+        return ", ".join(values)
+
+    if location.type is _AddressType.MARK:
+        if mark_index is None:
+            mark_index = build_mark_index(model)
+        coords = mark_index.get(location.mark)
+        if coords is None:
+            return ""
+        return _cell_value_at(model, coords[0], coords[1])
+
+    return ""
+
+def _resolve_value_refs(model: "TableModel") -> "TableModel":
+    refs = [
+        (cell, placeholder, address)
+        for row in model.cells
+        for cell in row
+        for placeholder, address in getattr(cell, "value_refs", [])
+    ]
+    if not refs:
+        return model
+
+    needs_mark_index = any(
+        address.location.type is _AddressType.MARK
+        for _, _, address in refs
+    )
+    mark_index = build_mark_index(model) if needs_mark_index else None
+
+    for cell, placeholder, address in refs:
+        value = _resolve_value_address(model, address, mark_index)
+        cell.raw_expr = cell.raw_expr.replace(placeholder, value)
+        cell.text_parts = [
+            part.replace(placeholder, value) if isinstance(part, str) else part
+            for part in cell.text_parts
+        ]
+    return model
 
 class TableModel:
     def __init__(self, rows: int, cols: int, cells: list[list[CellDesc]], border_width: int, border_color: str, border_style: str, stretch: int, cell_height: int):
@@ -146,6 +411,174 @@ class TableModel:
         self.border_style = border_style
         self.stretch = stretch
         self.cell_height = cell_height
+
+def _table_item_pycells_table_name(item: _Any) -> str:
+    if not isinstance(item, dict):
+        return None
+    return item.get("document") or item.get("document_name") or item.get("doc") or item.get("workbook")
+
+def _table_item_list_name(item: _Any, index: int) -> str:
+    if isinstance(item, dict):
+        return (
+            item.get("table_name")
+            or item.get("list_name")
+            or item.get("list")
+            or item.get("table")
+            or item.get("sheet")
+            or item.get("sheet_name")
+            or item.get("title")
+            or f"Table {index + 1}"
+        )
+    return f"Table {index + 1}"
+
+def _table_item_model(item: _Any, context: dict = None) -> "TableModel":
+    if isinstance(item, TableModel):
+        return item
+    if isinstance(item, dict):
+        if item.get("style") is None and item.get("data") is not None:
+            return parse(f'{item.get("preamble")}, {item.get("data")}', context)
+        return compile(
+            style=item.get("style"),
+            data=item.get("data"),
+            preamble=item.get("preamble"),
+            context=context
+        )
+    raise TypeError("Each table in 'tables' must be a TableModel or a dict.")
+
+def _table_item_meta(item: _Any, index: int) -> dict:
+    table_name = _table_item_pycells_table_name(item)
+    list_name = _table_item_list_name(item, index)
+    if isinstance(item, dict):
+        return {
+            "project": item.get("project"),
+            "document": table_name,
+            "table": list_name,
+            "list": list_name,
+            "title": item.get("title"),
+            "sheet_name": item.get("sheet_name") or list_name,
+        }
+    return {
+        "project": None,
+        "document": table_name,
+        "table": list_name,
+        "list": list_name,
+        "title": None,
+        "sheet_name": list_name,
+    }
+
+def _table_item_key(item: _Any, index: int) -> str:
+    meta = _table_item_meta(item, index)
+    document = meta.get("document")
+    list_name = meta.get("list")
+    return f"{document}!{list_name}" if document else str(list_name)
+
+def _merge_settings(defaults: dict, settings: dict = None, overrides: dict = None) -> dict:
+    merged = dict(defaults)
+    if settings:
+        merged.update(settings)
+    for key, value in (overrides or {}).items():
+        if value is not _SENTINEL:
+            merged[key] = value
+    return merged
+
+def _prepare_multitable_items(tables: list, settings: dict) -> list:
+    ordered = list(tables)
+    table_order = settings.get("table_order")
+    if not table_order:
+        return ordered
+
+    by_key = {}
+    for index, item in enumerate(ordered):
+        key = _table_item_key(item, index)
+        if key in by_key:
+            raise ValueError(f"Duplicate multitable key in table_order scope: {key}")
+        by_key[key] = item
+
+    missing = [key for key in table_order if key not in by_key]
+    if missing:
+        raise ValueError(f"Unknown table_order entries: {', '.join(missing)}")
+    return [by_key[key] for key in table_order]
+
+def _validate_multitable_columns(materialized: list, settings: dict) -> None:
+    columns = settings.get("columns")
+    if not columns:
+        return
+    if not isinstance(columns, dict):
+        raise ValueError("multitable columns setting must be a dict keyed by Table!List.")
+
+    for index, (model, meta) in enumerate(materialized):
+        key = f"{meta['document']}!{meta['list']}" if meta.get("document") else str(meta["list"])
+        expected = columns.get(key)
+        if expected is None:
+            continue
+        actual = [cell.raw_expr for cell in model.cells[0]] if model.cells else []
+        if actual != list(expected):
+            raise ValueError(
+                f"Column settings for {key} do not match the first data row. "
+                f"Expected {list(expected)!r}, got {actual!r}."
+            )
+
+def _html_settings(defaults: dict, settings: dict = None, overrides: dict = None) -> dict:
+    merged = _merge_settings(defaults, settings, overrides)
+    tables_per_row = merged.get("tables_per_row")
+    if tables_per_row is not None:
+        if merged.get("cols") not in (None, defaults.get("cols"), tables_per_row):
+            raise ValueError("HTML settings cols and tables_per_row must match.")
+        merged["cols"] = tables_per_row
+    return merged
+
+def _xlsx_settings(defaults: dict, settings: dict = None, overrides: dict = None) -> dict:
+    merged = _merge_settings(defaults, settings, overrides)
+    tables_per_sheet = merged.get("tables_per_sheet")
+    mode = str(merged.get("mode", "sheets")).lower()
+    if tables_per_sheet is not None:
+        if mode == "sheets" and tables_per_sheet not in (1, "one", "one_per_sheet"):
+            raise ValueError('XLSX mode="sheets" supports tables_per_sheet=1.')
+        if mode != "sheets" and tables_per_sheet not in ("all", None):
+            raise ValueError('XLSX mode="stacked" currently supports tables_per_sheet="all".')
+    merged["mode"] = mode
+    return merged
+
+def _pdf_settings(defaults: dict, settings: dict = None, overrides: dict = None) -> dict:
+    merged = _merge_settings(defaults, settings, overrides)
+    tables_per_row = merged.get("tables_per_row")
+    if tables_per_row is not None:
+        if isinstance(tables_per_row, str):
+            if tables_per_row.lower() != "auto":
+                raise ValueError('PDF tables_per_row must be a positive integer or "auto".')
+            merged["tables_per_row"] = "auto"
+        elif not isinstance(tables_per_row, int) or tables_per_row < 1:
+            raise ValueError('PDF tables_per_row must be a positive integer or "auto".')
+    tables_per_page = merged.get("tables_per_page")
+    if tables_per_page is not None:
+        if isinstance(tables_per_page, str):
+            if tables_per_page.lower() != "auto":
+                raise ValueError('PDF tables_per_page must be a positive integer or "auto".')
+            merged["tables_per_page"] = "auto"
+        elif not isinstance(tables_per_page, int) or tables_per_page < 1:
+            raise ValueError('PDF tables_per_page must be a positive integer or "auto".')
+    if (
+        tables_per_page is not None
+        and isinstance(merged.get("tables_per_row"), int)
+        and isinstance(merged.get("tables_per_page"), int)
+        and tables_per_page < merged["tables_per_row"]
+    ):
+        raise ValueError("PDF tables_per_page must be greater than or equal to tables_per_row.")
+    return merged
+
+def _write_html_output(output, html: str) -> None:
+    if output is None:
+        return
+    if hasattr(output, "write"):
+        output.write(html)
+        return
+    with open(output, "w", encoding="utf-8") as file:
+        file.write(html)
+
+def _normalize_output_target(output):
+    if output is None or hasattr(output, "write"):
+        return output
+    return _os.fspath(output)
 
 def _scan_open_tag(source: str):
     tag_open_match = _re.match(r'^<([a-zA-Z_]+)(?:=([^>]+)|\s+([^>]+))?>', source)
@@ -297,7 +730,7 @@ def _scan_data_content(content: str):
                 tok_line, tok_col = line, column
                 tag_text, tag_name, tag_attr = tag_open
                 advance(len(tag_text))
-                tok_type = _TokenType.TAG_SELF if tag_name.lower() == 'img' else _TokenType.TAG_OPEN
+                tok_type = _TokenType.TAG_SELF if _is_self_tag(tag_name) else _TokenType.TAG_OPEN
                 tokens.append(_Token(tok_type, tag_name, tok_line, tok_col, tag_attr))
                 continue
 
@@ -415,7 +848,7 @@ def _scan_csv_cell_content(cell_val: str):
                 tag_line, tag_col = line, column
                 tag_text, tag_name, tag_attr = tag_open
                 advance(len(tag_text))
-                tok_type = _TokenType.TAG_SELF if tag_name.lower() == 'img' else _TokenType.TAG_OPEN
+                tok_type = _TokenType.TAG_SELF if _is_self_tag(tag_name) else _TokenType.TAG_OPEN
                 tokens.append(_Token(tok_type, tag_name, tag_line, tag_col, tag_attr))
                 tok_line, tok_col = line, column
                 continue
@@ -524,7 +957,10 @@ def _parse_data_arg(content: str, context: dict = None):
                     cell.styles['background-color'] = active_tok.attr
             elif tag_lower == 'url':
                 if active_tok.attr:
-                    cell.styles['href'] = active_tok.attr
+                    link = _parse_link(active_tok.attr)
+                    cell.link = link
+                    if link.scheme != "goto":
+                        cell.styles['href'] = active_tok.attr
             elif tag_lower == 'fs':
                 if active_tok.attr:
                     cell.styles['font-size'] = active_tok.attr if any(c.isalpha() or c == '%' for c in active_tok.attr) else f"{active_tok.attr}px"
@@ -558,6 +994,20 @@ def _parse_data_arg(content: str, context: dict = None):
             tag_name = tok.value.lower()
             if tag_name == 'img':
                 current_cell.images.append(_parse_img_attrs(tok.attr, tok.line, tok.column))
+                apply_active_tags(current_cell)
+            elif tag_name == 'mark':
+                mark = str(tok.attr or "").strip()
+                if not mark:
+                    raise ValueError(f"<mark> requires a name at line {tok.line}, column {tok.column}.")
+                current_cell.mark = mark
+                apply_active_tags(current_cell)
+            elif tag_name == 'value':
+                if not tok.attr:
+                    raise ValueError(f"<value> requires an address at line {tok.line}, column {tok.column}.")
+                address = _parse_address(tok.attr)
+                placeholder = f"__TENTAGS_VALUE_REF_{len(current_cell.value_refs)}__"
+                current_cell.value_refs.append((placeholder, address))
+                current_cell.text_parts.append(placeholder)
                 apply_active_tags(current_cell)
             else:
                 current_cell.text_parts.append(f"<{tok.value}>")
@@ -729,11 +1179,19 @@ def _overlay_style_and_data(style_grid: list[list[CellDesc]], data_grid: list[li
                 merged_cell.border_flags = style_cell.border_flags
                 merged_cell.styles = dict(style_cell.styles)
                 merged_cell.images = list(style_cell.images)
+                merged_cell.link = style_cell.link
+                merged_cell.mark = style_cell.mark
+                merged_cell.value_refs = list(style_cell.value_refs)
 
             if data_cell:
                 merged_cell.raw_expr = data_cell.raw_expr
                 merged_cell.text_parts = list(data_cell.text_parts)
                 merged_cell.images.extend(data_cell.images)
+                merged_cell.value_refs.extend(data_cell.value_refs)
+                if data_cell.link is not None:
+                    merged_cell.link = data_cell.link
+                if data_cell.mark is not None:
+                    merged_cell.mark = data_cell.mark
                 if data_cell.cm_block_id is not None:
                     merged_cell.cm_block_id = data_cell.cm_block_id
                 if data_cell.rm_block_id is not None:
@@ -803,7 +1261,7 @@ def parse(formula_args: str, context: dict = None) -> TableModel:
             data_inner = match.group(1).strip()
             cells_grid = _parse_data_arg(data_inner, context)
 
-    return TableModel(
+    model = TableModel(
         rows=rows,
         cols=cols,
         cells=cells_grid,
@@ -813,11 +1271,20 @@ def parse(formula_args: str, context: dict = None) -> TableModel:
         stretch=stretch,
         cell_height=cell_height
     )
+    return _resolve_value_refs(model)
 
-def render_html(model: TableModel) -> str:
+def render_html(
+    model: TableModel,
+    address_resolver: AddressResolver = None,
+    address_context: AddressTarget = None,
+) -> str:
     """
     Renders a TableModel into an HTML table string.
     """
+    build_mark_index(model)
+    current_target = address_context or _make_address_target(model)
+    resolver = address_resolver or _local_address_resolver(current_target)
+
     border_style = str(model.border_style).strip().lower()
     apply_to_outer = True
     apply_to_inner = False
@@ -863,6 +1330,8 @@ def render_html(model: TableModel) -> str:
         for c in range(model.cols):
             val = ""
             href = None
+            link = None
+            mark = None
             images = []
             border_overrides = []
 
@@ -872,6 +1341,8 @@ def render_html(model: TableModel) -> str:
                 if val == 'None':
                     val = ''
                 images = cell.images
+                link = cell.link
+                mark = cell.mark
                 
                 if cell.border_flags & BorderFlags.HIDE_LEFT:
                     border_overrides.append("border-left:none;")
@@ -889,6 +1360,9 @@ def render_html(model: TableModel) -> str:
                     else:
                         border_overrides.append(f"{prop}:{prop_val};")
 
+                if link is not None:
+                    href = _link_to_html_href(link, resolver, current_target)
+
             overrides_css = "".join(border_overrides)
             td_style = f"{td_border}padding:0;{overrides_css}"
             
@@ -901,12 +1375,15 @@ def render_html(model: TableModel) -> str:
                 for img in images
             )
 
+            if mark:
+                content = f'<span id="{_html_mark_id(mark, current_target.html_prefix)}"></span>{content}'
+
             # Wrap with anchor if url tag was used
             if href:
                 safe_href = _html.escape(str(href), quote=True)
                 content = f'<a href="{safe_href}" style="color:inherit;text-decoration:inherit;">{content}</a>'
 
-            html.append(f'<td style="{td_style}">{content}</td>')
+            html.append(f'<td id="{_html_cell_id(r, c, current_target.html_prefix)}" style="{td_style}">{content}</td>')
         html.append('</tr>')
 
     html.append('</table>')
@@ -935,8 +1412,21 @@ def _normalize_color_to_hex(color_str: str) -> str:
         
     return '000000'
 
-def _write_model_to_sheet(model: TableModel, ws, start_row: int = 1):
+def _write_model_to_sheet(
+    model: TableModel,
+    ws,
+    start_row: int = 1,
+    address_resolver: AddressResolver = None,
+    address_context: AddressTarget = None,
+):
     from openpyxl.styles import Border, Side, Alignment, Font, PatternFill
+    mark_index = build_mark_index(model)
+    current_target = address_context or _make_address_target(
+        model,
+        xlsx_sheet_name=ws.title,
+        xlsx_start_row=start_row,
+    )
+    resolver = address_resolver or _local_address_resolver(current_target)
     
     # Configure borders mapping
     border_style = str(model.border_style).strip().lower()
@@ -973,12 +1463,15 @@ def _write_model_to_sheet(model: TableModel, ws, start_row: int = 1):
             val = ""
             cell_styles = {}
             images = []
+            link = None
             if r < len(model.cells) and c < len(model.cells[r]):
-                val = model.cells[r][c].raw_expr
+                cell = model.cells[r][c]
+                val = cell.raw_expr
                 if val == 'None':
                     val = ''
-                cell_styles = model.cells[r][c].styles
-                images = model.cells[r][c].images
+                cell_styles = cell.styles
+                images = cell.images
+                link = cell.link
             cell_ref.value = val or (images[0].get('src', '') if images else '')
 
             if images:
@@ -1063,8 +1556,13 @@ def _write_model_to_sheet(model: TableModel, ws, start_row: int = 1):
                 )
 
             # Apply hyperlink if url tag was used
-            if 'href' in cell_styles:
-                cell_ref.hyperlink = cell_styles['href']
+            xlsx_href = (
+                _link_to_xlsx_hyperlink(link, ws.title, mark_index, resolver, current_target)
+                if link is not None
+                else cell_styles.get('href')
+            )
+            if xlsx_href:
+                cell_ref.hyperlink = xlsx_href
                 # Apply standard hyperlink styling if no color already set
                 if 'color' not in cell_styles:
                     cell_ref.font = Font(
@@ -1134,7 +1632,12 @@ def _write_model_to_sheet(model: TableModel, ws, start_row: int = 1):
                     end_column=max_c + 1
                 )
 
-def render_xlsx(model: TableModel, filepath_or_stream):
+def render_xlsx(
+    model: TableModel,
+    filepath_or_stream,
+    address_resolver: AddressResolver = None,
+    address_context: AddressTarget = None,
+):
     """
     Renders a TableModel into an Excel (.xlsx) file.
     Requires openpyxl to be installed.
@@ -1147,14 +1650,26 @@ def render_xlsx(model: TableModel, filepath_or_stream):
     wb = openpyxl.Workbook()
     # Remove default active sheet
     wb.remove(wb.active)
-    ws = wb.create_sheet(title="Table")
-    _write_model_to_sheet(model, ws, start_row=1)
+    ws = wb.create_sheet(title=address_context.xlsx_sheet_name if address_context and address_context.xlsx_sheet_name else "Table")
+    _write_model_to_sheet(
+        model,
+        ws,
+        start_row=1,
+        address_resolver=address_resolver,
+        address_context=address_context,
+    )
     wb.save(filepath_or_stream)
 
-def _create_pdf_table_object(model: TableModel):
+def _create_pdf_table_object(
+    model: TableModel,
+    address_resolver: AddressResolver = None,
+    address_context: AddressTarget = None,
+):
     from reportlab.lib import colors
     from reportlab.platypus import Table, TableStyle, Paragraph
     from reportlab.lib.styles import ParagraphStyle
+    current_target = address_context or _make_address_target(model)
+    resolver = address_resolver or _local_address_resolver(current_target)
 
     # Convert border/background color to reportlab color
     def hex_to_rl_color(hex_str: str, default=colors.black):
@@ -1242,12 +1757,17 @@ def _create_pdf_table_object(model: TableModel):
             val = ""
             cell_styles = {}
             images = []
+            link = None
+            mark = None
             if r < len(model.cells) and c < len(model.cells[r]):
-                val = model.cells[r][c].raw_expr
+                cell = model.cells[r][c]
+                val = cell.raw_expr
                 if val == 'None':
                     val = ''
-                cell_styles = model.cells[r][c].styles
-                images = model.cells[r][c].images
+                cell_styles = cell.styles
+                images = cell.images
+                link = cell.link
+                mark = cell.mark
             if images and not val:
                 val = images[0].get('src', '')
 
@@ -1291,7 +1811,11 @@ def _create_pdf_table_object(model: TableModel):
             if is_strike:
                 table_styles.append(('STRIKETHROUGH', (c, r), (c, r)))
 
-            href_pdf = cell_styles.get('href')
+            href_pdf = (
+                _link_to_html_href(link, resolver, current_target, "pdf_prefix")
+                if link is not None
+                else cell_styles.get('href')
+            )
             if href_pdf and 'color' not in cell_styles:
                 # Default hyperlink blue
                 table_styles.append(('TEXTCOLOR', (c, r), (c, r), colors.HexColor('#0563C1')))
@@ -1312,7 +1836,10 @@ def _create_pdf_table_object(model: TableModel):
                     textColor=font_color,
                     alignment=rl_align
                 )
-                cell_text = str(val)
+                anchors = [f'<a name="{_html_cell_id(r, c, current_target.pdf_prefix)}"/>']
+                if mark:
+                    anchors.append(f'<a name="{_html_mark_id(mark, current_target.pdf_prefix)}"/>')
+                cell_text = "".join(anchors) + str(val)
                 if is_underline:
                     cell_text = f'<u>{cell_text}</u>'
                 if is_strike:
@@ -1330,7 +1857,12 @@ def _create_pdf_table_object(model: TableModel):
 
     return Table(data_matrix, rowHeights=row_heights, style=TableStyle(table_styles))
 
-def render_pdf(model: TableModel, filepath_or_stream: _Union[str, _Any]) -> None:
+def render_pdf(
+    model: TableModel,
+    filepath_or_stream: _Union[str, _Any],
+    address_resolver: AddressResolver = None,
+    address_context: AddressTarget = None,
+) -> None:
     """
     Renders a TableModel directly to a PDF document using ReportLab.
     Translates IR coordinates, merged regions, background fills, fonts, and borders into native ReportLab TableStyles.
@@ -1353,7 +1885,11 @@ def render_pdf(model: TableModel, filepath_or_stream: _Union[str, _Any]) -> None
         bottomMargin=36
     )
 
-    table = _create_pdf_table_object(model)
+    table = _create_pdf_table_object(
+        model,
+        address_resolver=address_resolver,
+        address_context=address_context,
+    )
     doc.build([table])
 
 def _load_style(filepath_or_str: _Union[str, list], context: dict = None) -> list[list[CellDesc]]:
@@ -1447,7 +1983,7 @@ def compile(preamble: _Any, style: _Any, data: _Any, context: dict = None) -> Ta
             rows = preamble.get('rows', rows)
             cols = preamble.get('cols', cols)
 
-    return TableModel(
+    model = TableModel(
         rows=rows,
         cols=cols,
         cells=cells_grid,
@@ -1457,6 +1993,7 @@ def compile(preamble: _Any, style: _Any, data: _Any, context: dict = None) -> Ta
         stretch=stretch,
         cell_height=cell_height
     )
+    return _resolve_value_refs(model)
 
 def render(preamble_or_formula: _Any, style: _Any = None, data: _Any = None, context: dict = None) -> str:
     """
@@ -1499,67 +2036,108 @@ def render(preamble_or_formula: _Any, style: _Any = None, data: _Any = None, con
 
 def multitable_html(
     tables: list, 
-    layout: str = "vertical", 
-    cols: int = 1, 
-    gap: str = "24px", 
-    full_page: bool = False, 
-    context: dict = None
+    layout: str = _SENTINEL, 
+    cols: int = _SENTINEL, 
+    gap: str = _SENTINEL, 
+    full_page: bool = _SENTINEL, 
+    context: dict = None,
+    settings: dict = None,
 ) -> str:
     """
     Assembles and renders multiple tables into a single HTML string.
     """
+    settings = _html_settings(
+        DEFAULT_MULTITABLE_HTML_SETTINGS,
+        settings,
+        {
+            "layout": layout,
+            "cols": cols,
+            "gap": gap,
+            "full_page": full_page,
+        },
+    )
+    tables = _prepare_multitable_items(tables, settings)
+    resolver = AddressResolver()
+    materialized = []
+    for index, item in enumerate(tables):
+        model = _table_item_model(item, context)
+        meta = _table_item_meta(item, index)
+        address_context = AddressContext(
+            project=meta["project"],
+            document=meta["document"],
+            list_name=meta["list"],
+        )
+        prefix = AddressResolver.html_prefix_for(address_context, index)
+        target = resolver.register(
+            model,
+            project=meta["project"],
+            document=meta["document"],
+            list_name=meta["list"],
+            html_prefix=prefix,
+            xlsx_sheet_name=meta["sheet_name"],
+            pdf_prefix=prefix,
+        )
+        materialized.append((model, meta, target))
+
+    _validate_multitable_columns([(model, meta) for model, meta, _ in materialized], settings)
+
     rendered_tables = []
-    for item in tables:
-        if isinstance(item, TableModel):
-            model = item
-            title = None
-        elif isinstance(item, dict):
-            model = compile(
-                style=item.get("style"),
-                data=item.get("data"),
-                preamble=item.get("preamble"),
-                context=context
-            )
-            title = item.get("title")
-        else:
-            raise TypeError("Each table in 'tables' must be a TableModel or a dict.")
-        
-        table_html = render_html(model)
+    for model, meta, target in materialized:
+        table_html = render_html(model, address_resolver=resolver, address_context=target)
+        title = meta["title"]
         if title:
             table_html = f"<div><h3>{title}</h3>{table_html}</div>"
         rendered_tables.append(table_html)
 
-    if layout == "grid":
-        style_container = f"display: grid; grid-template-columns: repeat({cols}, 1fr); gap: {gap};"
+    if settings["layout"] == "grid":
+        style_container = f"display: grid; grid-template-columns: repeat({settings['cols']}, 1fr); gap: {settings['gap']};"
     else:
-        style_container = f"display: flex; flex-direction: column; gap: {gap};"
+        style_container = f"display: flex; flex-direction: column; gap: {settings['gap']};"
 
     container = f'<div style="{style_container}">\n' + "\n".join(rendered_tables) + '\n</div>'
 
-    if full_page:
-        return f"""<!DOCTYPE html>
+    if settings["full_page"]:
+        html = f"""<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Multi-Table Report</title>
+    <title>{_html.escape(str(settings["html_title"]))}</title>
 </head>
 <body>
     {container}
 </body>
 </html>"""
-    return container
+    else:
+        html = container
+    _write_html_output(settings.get("output"), html)
+    return html
 
 def multitable_xlsx(
     tables: list, 
-    filepath_or_stream, 
-    mode: str = "sheets", 
-    gap: int = 3, 
-    show_titles: bool = True, 
-    context: dict = None
+    filepath_or_stream=None, 
+    mode: str = _SENTINEL, 
+    gap: int = _SENTINEL, 
+    show_titles: bool = _SENTINEL, 
+    context: dict = None,
+    settings: dict = None,
 ) -> None:
     """
     Assembles and renders multiple tables into a single Excel (.xlsx) workbook.
     """
+    settings = _xlsx_settings(
+        DEFAULT_MULTITABLE_XLSX_SETTINGS,
+        settings,
+        {
+            "mode": mode,
+            "gap": gap,
+            "show_titles": show_titles,
+        },
+    )
+    filepath_or_stream = _normalize_output_target(filepath_or_stream or settings.get("output"))
+    if filepath_or_stream is None:
+        raise ValueError("multitable_xlsx requires filepath_or_stream or settings['output'].")
+    tables = _prepare_multitable_items(tables, settings)
+
     try:
         import openpyxl
         from openpyxl.styles import Font
@@ -1569,68 +2147,113 @@ def multitable_xlsx(
     wb = openpyxl.Workbook()
     wb.remove(wb.active)
 
-    if mode == "sheets":
-        for i, item in enumerate(tables):
-            if isinstance(item, TableModel):
-                model = item
-                sheet_name = f"Table {i + 1}"
-            elif isinstance(item, dict):
-                model = compile(
-                    style=item.get("style"),
-                    data=item.get("data"),
-                    preamble=item.get("preamble"),
-                    context=context
-                )
-                sheet_name = item.get("sheet_name") or f"Table {i + 1}"
-            else:
-                raise TypeError("Each table in 'tables' must be a TableModel or a dict.")
-            
+    materialized = [
+        (_table_item_model(item, context), _table_item_meta(item, index))
+        for index, item in enumerate(tables)
+    ]
+    _validate_multitable_columns(materialized, settings)
+
+    if settings["mode"] == "sheets":
+        resolver = AddressResolver()
+        targets = []
+        for model, meta in materialized:
+            target = resolver.register(
+                model,
+                project=meta["project"],
+                document=meta["document"],
+                list_name=meta["list"],
+                xlsx_sheet_name=meta["sheet_name"],
+                xlsx_start_row=1,
+            )
+            targets.append(target)
+
+        for (model, meta), target in zip(materialized, targets):
+            sheet_name = meta["sheet_name"]
             ws = wb.create_sheet(title=sheet_name)
-            _write_model_to_sheet(model, ws, start_row=1)
+            _write_model_to_sheet(
+                model,
+                ws,
+                start_row=1,
+                address_resolver=resolver,
+                address_context=target,
+            )
     else: # stacked
-        ws = wb.create_sheet(title="Report")
+        stacked_sheet_name = settings["stacked_sheet_name"]
+        ws = wb.create_sheet(title=stacked_sheet_name)
         current_row = 1
-        for i, item in enumerate(tables):
-            if isinstance(item, TableModel):
-                model = item
-                title = None
-            elif isinstance(item, dict):
-                model = compile(
-                    style=item.get("style"),
-                    data=item.get("data"),
-                    preamble=item.get("preamble"),
-                    context=context
-                )
-                title = item.get("title")
-            else:
-                raise TypeError("Each table in 'tables' must be a TableModel or a dict.")
-            
-            if show_titles and title:
+        resolver = AddressResolver()
+        targets = []
+        for model, meta in materialized:
+            title = meta["title"]
+            table_start_row = current_row + 1 if settings["show_titles"] and title else current_row
+            target = resolver.register(
+                model,
+                project=meta["project"],
+                document=meta["document"],
+                list_name=meta["list"],
+                xlsx_sheet_name=stacked_sheet_name,
+                xlsx_start_row=table_start_row,
+            )
+            targets.append(target)
+            current_row = table_start_row + model.rows + settings["gap"]
+
+        current_row = 1
+        for (model, meta), target in zip(materialized, targets):
+            title = meta["title"]
+            if settings["show_titles"] and title:
                 cell = ws.cell(row=current_row, column=1)
                 cell.value = title
                 cell.font = Font(bold=True, size=14)
                 current_row += 1
             
-            _write_model_to_sheet(model, ws, start_row=current_row)
-            current_row += model.rows + gap
+            _write_model_to_sheet(
+                model,
+                ws,
+                start_row=current_row,
+                address_resolver=resolver,
+                address_context=target,
+            )
+            current_row += model.rows + settings["gap"]
 
     wb.save(filepath_or_stream)
 
 def multitable_pdf(
     tables: list, 
-    filepath_or_stream, 
-    page_size: str = "letter", 
-    orientation: str = "portrait", 
-    page_break_after_each: bool = True, 
-    margins: tuple = (36, 36, 36, 36), 
-    context: dict = None
+    filepath_or_stream=None, 
+    page_size: str = _SENTINEL, 
+    orientation: str = _SENTINEL, 
+    page_break_after_each: bool = _SENTINEL, 
+    margins: tuple = _SENTINEL, 
+    tables_per_row: _Any = _SENTINEL,
+    tables_per_page: _Any = _SENTINEL,
+    gap: int = _SENTINEL,
+    context: dict = None,
+    settings: dict = None,
 ) -> None:
     """
     Assembles and renders multiple tables into a single PDF document.
     """
+    settings = _pdf_settings(
+        DEFAULT_MULTITABLE_PDF_SETTINGS,
+        settings,
+        {
+            "page_size": page_size,
+            "orientation": orientation,
+            "page_break_after_each": page_break_after_each,
+            "margins": margins,
+            "tables_per_row": tables_per_row,
+            "tables_per_page": tables_per_page,
+            "gap": gap,
+        },
+    )
+    filepath_or_stream = _normalize_output_target(filepath_or_stream or settings.get("output"))
+    if filepath_or_stream is None:
+        raise ValueError("multitable_pdf requires filepath_or_stream or settings['output'].")
+    tables = _prepare_multitable_items(tables, settings)
+
     try:
         from reportlab.lib.pagesizes import letter, landscape
-        from reportlab.platypus import SimpleDocTemplate, PageBreak, Paragraph
+        from reportlab.platypus import SimpleDocTemplate, PageBreak, Paragraph, Table, TableStyle
         from reportlab.lib.styles import ParagraphStyle
     except ImportError:
         raise ImportError(
@@ -1640,52 +2263,180 @@ def multitable_pdf(
 
     # Resolve page size
     base_page_size = letter
-    if page_size.lower() == "a4":
+    if str(settings["page_size"]).lower() == "a4":
         from reportlab.lib.pagesizes import A4
         base_page_size = A4
 
-    actual_page_size = landscape(base_page_size) if orientation.lower() == "landscape" else base_page_size
+    actual_page_size = landscape(base_page_size) if str(settings["orientation"]).lower() == "landscape" else base_page_size
 
     doc = SimpleDocTemplate(
         filepath_or_stream,
         pagesize=actual_page_size,
-        leftMargin=margins[0],
-        rightMargin=margins[1],
-        topMargin=margins[2],
-        bottomMargin=margins[3]
+        leftMargin=settings["margins"][0],
+        rightMargin=settings["margins"][1],
+        topMargin=settings["margins"][2],
+        bottomMargin=settings["margins"][3]
     )
 
-    story = []
-    for i, item in enumerate(tables):
-        if isinstance(item, TableModel):
-            model = item
-            title = None
-        elif isinstance(item, dict):
-            model = compile(
-                style=item.get("style"),
-                data=item.get("data"),
-                preamble=item.get("preamble"),
-                context=context
-            )
-            title = item.get("title")
-        else:
-            raise TypeError("Each table in 'tables' must be a TableModel or a dict.")
+    resolver = AddressResolver()
+    materialized = []
+    for index, item in enumerate(tables):
+        model = _table_item_model(item, context)
+        meta = _table_item_meta(item, index)
+        address_context = AddressContext(
+            project=meta["project"],
+            document=meta["document"],
+            list_name=meta["list"],
+        )
+        prefix = AddressResolver.html_prefix_for(address_context, index)
+        target = resolver.register(
+            model,
+            project=meta["project"],
+            document=meta["document"],
+            list_name=meta["list"],
+            xlsx_sheet_name=meta["sheet_name"],
+            html_prefix=prefix,
+            pdf_prefix=prefix,
+        )
+        materialized.append((model, meta, target))
 
+    _validate_multitable_columns([(model, meta) for model, meta, _ in materialized], settings)
+
+    def table_block(model, meta, target, index):
+        block = []
+        title = meta["title"]
         if title:
             p_style = ParagraphStyle(
-                f"Title_{i}", 
-                fontName="Helvetica-Bold", 
-                fontSize=14, 
-                leading=18, 
+                f"Title_{index}",
+                fontName="Helvetica-Bold",
+                fontSize=14,
+                leading=18,
                 spaceAfter=10
             )
-            story.append(Paragraph(title, p_style))
+            block.append(Paragraph(title, p_style))
+        block.append(
+            _create_pdf_table_object(
+                model,
+                address_resolver=resolver,
+                address_context=target,
+            )
+        )
+        return block
 
-        table_obj = _create_pdf_table_object(model)
-        story.append(table_obj)
+    def auto_tables_per_row(blocks, content_width, gap_size):
+        if not blocks:
+            return 1
+        widths = []
+        for block in blocks:
+            table_flowable = block[-1] if block else None
+            if table_flowable is None:
+                continue
+            width, _ = table_flowable.wrap(content_width, actual_page_size[1])
+            widths.append(width)
+        if not widths:
+            return 1
+        max_width = max(widths)
+        if max_width <= 0:
+            return 1
+        columns = int((content_width + gap_size) // (max_width + gap_size))
+        return max(1, min(columns, len(blocks)))
 
-        if page_break_after_each and i < len(tables) - 1:
-            story.append(PageBreak())
+    def block_height(block, width):
+        total = 0
+        for flowable in block:
+            _, height = flowable.wrap(width, actual_page_size[1])
+            total += height
+        return total
+
+    def auto_tables_per_page(blocks, tables_per_row, col_width, content_height, gap_size):
+        if not blocks:
+            return 1
+        row_heights = []
+        for row_index in range(0, len(blocks), tables_per_row):
+            row_blocks = blocks[row_index:row_index + tables_per_row]
+            row_heights.append(max(block_height(block, col_width) for block in row_blocks))
+        if not row_heights:
+            return 1
+
+        rows_that_fit = 0
+        used_height = 0
+        for row_height in row_heights:
+            next_height = used_height + row_height
+            if rows_that_fit > 0:
+                next_height += gap_size
+            if rows_that_fit > 0 and next_height > content_height:
+                break
+            used_height = next_height
+            rows_that_fit += 1
+            if used_height >= content_height:
+                break
+
+        return max(1, rows_that_fit) * tables_per_row
+
+    story = []
+    blocks = [
+        table_block(model, meta, target, index)
+        for index, (model, meta, target) in enumerate(materialized)
+    ]
+    content_width = actual_page_size[0] - settings["margins"][0] - settings["margins"][1]
+    content_height = actual_page_size[1] - settings["margins"][2] - settings["margins"][3]
+    gap_size = settings.get("gap") or 0
+    tables_per_row = settings.get("tables_per_row") or 1
+    if tables_per_row == "auto":
+        tables_per_row = auto_tables_per_row(blocks, content_width, gap_size)
+    tables_per_page = settings.get("tables_per_page")
+    col_width = (content_width - (tables_per_row - 1) * gap_size) / tables_per_row
+    if tables_per_page == "auto":
+        tables_per_page = auto_tables_per_page(
+            blocks,
+            tables_per_row,
+            col_width,
+            content_height,
+            gap_size,
+        )
+    if tables_per_page is not None:
+        tables_per_row = min(tables_per_row, tables_per_page)
+
+    if tables_per_row > 1:
+        page_size = tables_per_page or len(blocks)
+        page_groups = [
+            blocks[index:index + page_size]
+            for index in range(0, len(blocks), page_size)
+        ]
+
+        for page_index, page_blocks in enumerate(page_groups):
+            grid_rows = []
+            for row_index in range(0, len(page_blocks), tables_per_row):
+                row_blocks = page_blocks[row_index:row_index + tables_per_row]
+                while len(row_blocks) < tables_per_row:
+                    row_blocks.append("")
+                grid_rows.append(row_blocks)
+
+            grid_table = Table(
+                grid_rows,
+                colWidths=[col_width] * tables_per_row,
+                style=TableStyle([
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("LEFTPADDING", (0, 0), (-1, -1), gap_size / 2),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), gap_size / 2),
+                    ("TOPPADDING", (0, 0), (-1, -1), gap_size / 2),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), gap_size / 2),
+                ]),
+            )
+            story.append(grid_table)
+            if page_index < len(page_groups) - 1:
+                story.append(PageBreak())
+    else:
+        for i, block in enumerate(blocks):
+            story.extend(block)
+
+            should_break = False
+            if tables_per_page is not None:
+                should_break = (i + 1) % tables_per_page == 0
+            else:
+                should_break = bool(settings["page_break_after_each"])
+            if should_break and i < len(tables) - 1:
+                story.append(PageBreak())
 
     doc.build(story)
 

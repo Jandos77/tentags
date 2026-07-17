@@ -1,0 +1,19 @@
+document,table_name,sheet_name,title,row,A,B,C,D
+Dashboard,Menu,Menu,Dashboard Menu,1,Section,Target,Owner,Status
+Dashboard,Menu,Menu,Dashboard Menu,2,Invoice,Invoice!Items!A1,Finance,Ready
+Dashboard,Menu,Menu,Dashboard Menu,3,Customers,CRM!Customers!A1,Sales,Ready
+Dashboard,Menu,Menu,Dashboard Menu,4,Sales,Report!Sales!A1,Analytics,Review
+Invoice,Items,Items,Invoice Items,1,Item,Qty,Unit Price,Total
+Invoice,Items,Items,Invoice Items,2,Paper,10,2.50,25.00
+Invoice,Items,Items,Invoice Items,3,Pen,5,1.60,8.00
+Invoice,Items,Items,Invoice Items,4,Folder,3,4.00,12.00
+Invoice,Items,Items,Invoice Items,5,Total,,,45.00
+CRM,Customers,Customers,CRM Customers,1,Customer,Segment,Revenue,Status
+CRM,Customers,Customers,CRM Customers,2,Alice,Enterprise,125000,Active
+CRM,Customers,Customers,CRM Customers,3,Bob,SMB,42000,VIP
+CRM,Customers,Customers,CRM Customers,4,Carol,Midmarket,76000,Review
+Report,Sales,Sales,Sales Report,1,Month,Orders,Revenue,Status
+Report,Sales,Sales,Sales Report,2,January,120,2500,Closed
+Report,Sales,Sales,Sales Report,3,February,145,3100,Closed
+Report,Sales,Sales,Sales Report,4,March,160,3550,Closed
+Report,Sales,Sales,Sales Report,5,April,175,3900,Forecast

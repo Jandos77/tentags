@@ -331,91 +331,135 @@ Exports a `TableModel` directly to a vector **PDF** file using `ReportLab`. Tran
 
 ---
 
-## 🗂️ Multi-Table Rendering (v1.1.0+)
+## 🗂️ Multi-Table Rendering
 
-TenTags supports assembling and rendering multiple independent tables into a single output file (HTML Grid, Multi-Sheet or Stacked Excel workbook, or Multi-Page PDF report). This is highly useful for generating comprehensive reports where you want to reuse preambles and styling templates across different datasets.
+TenTags supports assembling several independent logical Lists/Tables into one HTML, XLSX, or PDF export. A multitable report is not one large grid: each List has its own preamble, style, data, title, and optional XLSX sheet name.
 
-Each table is defined as a dictionary containing its components:
+Each table item uses PyCells-compatible logical naming:
+
 ```python
 table_definition = {
-    "preamble": "3, 4, 1, #1977ff, solid-1, 0, 40",  # Optional: table structure and borders
-    "style": "style(<bg=white><center>...</center></bg>)",  # Optional: styling layout template
-    "data": "data(Item, Qty; Wood, 10; Metal, 5)", # Required: table content
-    "title": "Materials Summary",              # Optional: display title for PDF and stacked Excel
-    "sheet_name": "Materials"                  # Optional: Worksheet name for Excel sheets mode
+    "document": "Dashboard",       # logical Table / document name
+    "table_name": "Menu",          # logical List name
+    "sheet_name": "Menu",          # physical XLSX worksheet name
+    "title": "Dashboard Menu",
+    "preamble": '2,2,1,"#0f172a","solid",0,24',
+    "style": "style(<bg=#dbeafe><b></b></bg>, <bg=#dbeafe><b></b></bg>; <bg=#eff6ff></bg>, <bg=#eff6ff></bg>)",
+    "data": "data(<mark=Top>Section, Link; Invoice, <url=goto:Invoice!Items!A1>Open invoice</url>)",
 }
 ```
 
-### Example: Assembling a Multi-Table Report
+Use named export settings for file output, table order, column validation, and renderer layout. These settings are part of the library API and are passed with `settings=...`.
 
 ```python
 import tentags
 
-# Define reusable templates
-common_preamble = '4, 4, 1, #1977ff, solid-1, 0, 40'
-common_style = '''style(
-    <bg=#1e293b><color=white><b><cm> , , , </cm></b></color></bg>;
-    <bg=#e2e8f0><b><left></left></b></bg>, <bg=#e2e8f0><b><center></center></b></bg>, <bg=#e2e8f0><b><right></right></b></bg>, <bg=#e2e8f0><b><right></right></b></bg>;
-    <left></left>, <center></center>, <right></right>, <right></right>;
-    <left></left>, <center></center>, <right></right>, <right></right>
-)'''
-
-# Define distinct datasets
-data_materials = 'data(Materials Report, , , ; Item, Qty, Price, Total; Wood, 10, 150, 1500; Metal, 5, 300, 1500)'
-data_tools = 'data(Tools Report, , , ; Tool, Qty, Condition, Status; Hammer, 2, New, Active; Drill, 1, Used, Active)'
-
-# Assemble reports list
-report_tables = [
+tables = [
     {
-        "preamble": common_preamble,
-        "style": common_style,
-        "data": data_materials,
-        "title": "Materials Summary Report",
-        "sheet_name": "Materials"
+        "document": "Dashboard",
+        "table_name": "Menu",
+        "sheet_name": "Menu",
+        "title": "Dashboard Menu",
+        "preamble": '2,2,1,"#0f172a","solid",0,24',
+        "style": "style(<bg=#dbeafe><b></b></bg>, <bg=#dbeafe><b></b></bg>; <bg=#eff6ff></bg>, <bg=#eff6ff></bg>)",
+        "data": "data(<mark=Top>Section, Link; Invoice, <url=goto:Invoice!Items!A1>Open invoice</url>)",
     },
     {
-        "preamble": common_preamble,
-        "style": common_style,
-        "data": data_tools,
-        "title": "Tools Inventory Report",
-        "sheet_name": "Tools"
-    }
+        "document": "Invoice",
+        "table_name": "Items",
+        "sheet_name": "Items",
+        "title": "Invoice Items",
+        "preamble": '2,2,1,"#7c2d12","solid",0,24',
+        "style": "style(<bg=#ffedd5><b></b></bg>, <bg=#ffedd5><b></b></bg>; <bg=#fff7ed></bg>, <bg=#fff7ed></bg>)",
+        "data": "data(Item, Total; Paper, <url=goto:Dashboard!Menu!Top>$25</url>)",
+    },
 ]
 
-# 1. Compile to a multi-page PDF document
-tentags.multitable_pdf(report_tables, "combined_report.pdf", page_size="A4", orientation="portrait", page_break_after_each=True)
+TABLE_ORDER = ["Dashboard!Menu", "Invoice!Items"]
+COLUMNS = {
+    "Dashboard!Menu": ["Section", "Link"],
+    "Invoice!Items": ["Item", "Total"],
+}
 
-# 2. Export to a single Excel workbook (each table on a separate sheet)
-tentags.multitable_xlsx(report_tables, "combined_sheets.xlsx", mode="sheets")
+HTML_SETTINGS = {
+    "output": "combined_report.html",
+    "table_order": TABLE_ORDER,
+    "columns": COLUMNS,
+    "tables_per_row": 2,
+    "html_title": "Combined Report",
+    "layout": "grid",
+    "cols": 2,
+    "gap": "30px",
+    "full_page": True,
+}
 
-# 3. Export to a single Excel workbook (tables stacked vertically on one sheet with gaps)
-tentags.multitable_xlsx(report_tables, "combined_stacked.xlsx", mode="stacked", gap=3)
+XLSX_SHEETS_SETTINGS = {
+    "output": "combined_sheets.xlsx",
+    "table_order": TABLE_ORDER,
+    "columns": COLUMNS,
+    "tables_per_sheet": 1,
+    "mode": "sheets",
+}
 
-# 4. Generate an HTML 2-column Grid layout
-html_grid = tentags.multitable_html(report_tables, layout="grid", cols=2, gap="30px")
+XLSX_STACKED_SETTINGS = {
+    "output": "combined_stacked.xlsx",
+    "table_order": TABLE_ORDER,
+    "columns": COLUMNS,
+    "tables_per_sheet": "all",
+    "stacked_sheet_name": "Report",
+    "mode": "stacked",
+    "gap": 3,
+    "show_titles": True,
+}
+
+PDF_SETTINGS = {
+    "output": "combined_report.pdf",
+    "table_order": TABLE_ORDER,
+    "columns": COLUMNS,
+    "tables_per_row": "auto",
+    "tables_per_page": "auto",
+    "gap": 16,
+    "page_size": "A4",
+    "orientation": "landscape",
+    "page_break_after_each": False,
+    "margins": (24, 24, 36, 36),
+}
+
+html = tentags.multitable_html(tables, settings=HTML_SETTINGS)
+tentags.multitable_xlsx(tables, settings=XLSX_SHEETS_SETTINGS)
+tentags.multitable_xlsx(tables, settings=XLSX_STACKED_SETTINGS)
+tentags.multitable_pdf(tables, settings=PDF_SETTINGS)
 ```
 
 ### Multi-Table API Reference
 
-### `tentags.multitable_html(tables: list, layout: str = "vertical", cols: int = 1, gap: str = "24px", full_page: bool = False, context: dict = None) -> str`
-Assembles and renders multiple tables into a single HTML container string.
-- **`layout`**: `'vertical'` (stacked) or `'grid'` (using CSS Grid).
-- **`cols`**: Number of columns in CSS Grid (only applicable when `layout='grid'`).
-- **`gap`**: CSS spacing between tables (e.g., `'20px'`, `'1.5rem'`).
-- **`full_page`**: If `True`, wraps the output in a complete HTML document with `<html>` and `<body>` tags.
+### `tentags.multitable_html(tables, ..., settings: dict = None) -> str`
+Assembles and renders multiple tables into a single HTML container or full HTML document.
+- **`settings["output"]`**: Optional HTML output path or writable stream.
+- **`settings["table_order"]`**: Optional list of logical keys such as `Dashboard!Menu`.
+- **`settings["columns"]`**: Optional column header validation by `Table!List`.
+- **`settings["tables_per_row"]`** / **`cols`**: Number of HTML grid columns.
+- **`settings["html_title"]`**: `<title>` used when `full_page=True`.
+- **`layout`**, **`gap`**, **`full_page`**: HTML renderer layout options.
 
-### `tentags.multitable_xlsx(tables: list, filepath_or_stream, mode: str = "sheets", gap: int = 3, show_titles: bool = True, context: dict = None) -> None`
+### `tentags.multitable_xlsx(tables, filepath_or_stream=None, ..., settings: dict = None) -> None`
 Assembles and renders multiple tables into a single Excel `.xlsx` workbook.
-- **`mode`**: `'sheets'` (creates a separate Worksheet for each table) or `'stacked'` (renders all tables vertically on a single sheet).
-- **`gap`**: Number of empty rows between stacked tables (only applicable when `mode='stacked'`).
-- **`show_titles`**: If `True`, renders the optional table `title` in bold above each table (only applicable when `mode='stacked'`).
+- **`settings["output"]`**: Optional XLSX output path or stream.
+- **`settings["mode"]`**: `'sheets'` for one worksheet per List or `'stacked'` for one worksheet.
+- **`settings["tables_per_sheet"]`**: `1` for sheets mode or `'all'` for stacked mode.
+- **`settings["stacked_sheet_name"]`**: Worksheet name used by stacked mode.
+- **`settings["gap"]`** and **`settings["show_titles"]`**: Stacked worksheet layout options.
 
-### `tentags.multitable_pdf(tables: list, filepath_or_stream, page_size: str = "letter", orientation: str = "portrait", page_break_after_each: bool = True, margins: tuple = (36, 36, 36, 36), context: dict = None) -> None`
+### `tentags.multitable_pdf(tables, filepath_or_stream=None, ..., settings: dict = None) -> None`
 Assembles and renders multiple tables into a single PDF document.
-- **`page_size`**: `'letter'` or `'A4'`.
-- **`orientation`**: `'portrait'` or `'landscape'`.
-- **`page_break_after_each`**: If `True`, places a page break after each table so they start on a fresh page.
-- **`margins`**: Page margins tuple `(left, right, top, bottom)` in points (default: `(36, 36, 36, 36)`).
+- **`settings["output"]`**: Optional PDF output path or stream.
+- **`settings["tables_per_row"]`**: Positive integer or `'auto'`. Auto computes how many tables fit across the page width.
+- **`settings["tables_per_page"]`**: Positive integer or `'auto'`. Auto computes how many table blocks fit in page height.
+- **`settings["gap"]`**: Spacing between table blocks in points.
+- **`settings["page_size"]`**: `'letter'` or `'A4'`.
+- **`settings["orientation"]`**: `'portrait'` or `'landscape'`.
+- **`settings["margins"]`**: `(left, right, top, bottom)` in points.
+- **`settings["page_break_after_each"]`**: Legacy/simple-flow page break flag when no multi-column layout is used.
 
 ---
 

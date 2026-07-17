@@ -256,6 +256,90 @@ html  = tentags.render(preamble, style, data)
 html2 = tentags.render(preamble, style, 'data(Department Report, , ; Department, Employees, Budget; Marketing, 8, "$200,000")')
 ```
 
+### Multitable export settings
+
+Multitable means several separate logical Lists/Tables, not one large grid. Each List has its own `preamble`, `style(...)`, `data(...)`, title, and XLSX sheet name. File output and visual layout are controlled through library-level `settings=...` dictionaries.
+
+```python
+import tentags
+
+tables = [
+    {
+        "document": "Dashboard",
+        "table_name": "Menu",
+        "sheet_name": "Menu",
+        "title": "Dashboard Menu",
+        "preamble": '2,2,1,"#0f172a","solid",0,24',
+        "style": "style(<bg=#dbeafe><b></b></bg>, <bg=#dbeafe><b></b></bg>; <bg=#eff6ff></bg>, <bg=#eff6ff></bg>)",
+        "data": "data(<mark=Top>Section, Link; Invoice, <url=goto:Invoice!Items!A1>Open invoice</url>)",
+    },
+    {
+        "document": "Invoice",
+        "table_name": "Items",
+        "sheet_name": "Items",
+        "title": "Invoice Items",
+        "preamble": '2,2,1,"#7c2d12","solid",0,24',
+        "style": "style(<bg=#ffedd5><b></b></bg>, <bg=#ffedd5><b></b></bg>; <bg=#fff7ed></bg>, <bg=#fff7ed></bg>)",
+        "data": "data(Item, Total; Paper, <url=goto:Dashboard!Menu!Top>$25</url>)",
+    },
+]
+
+TABLE_ORDER = ["Dashboard!Menu", "Invoice!Items"]
+COLUMNS = {
+    "Dashboard!Menu": ["Section", "Link"],
+    "Invoice!Items": ["Item", "Total"],
+}
+
+HTML_SETTINGS = {
+    "output": "multitable_demo.html",
+    "table_order": TABLE_ORDER,
+    "columns": COLUMNS,
+    "tables_per_row": 2,
+    "html_title": "Multitable Demo",
+    "layout": "grid",
+    "cols": 2,
+    "gap": "30px",
+    "full_page": True,
+}
+
+XLSX_SHEETS_SETTINGS = {
+    "output": "multitable_demo.xlsx",
+    "table_order": TABLE_ORDER,
+    "columns": COLUMNS,
+    "tables_per_sheet": 1,
+    "mode": "sheets",
+}
+
+XLSX_STACKED_SETTINGS = {
+    "output": "multitable_demo_stacked.xlsx",
+    "table_order": TABLE_ORDER,
+    "columns": COLUMNS,
+    "tables_per_sheet": "all",
+    "stacked_sheet_name": "Report",
+    "mode": "stacked",
+    "gap": 2,
+    "show_titles": True,
+}
+
+PDF_SETTINGS = {
+    "output": "multitable_demo.pdf",
+    "table_order": TABLE_ORDER,
+    "columns": COLUMNS,
+    "tables_per_row": "auto",
+    "tables_per_page": "auto",
+    "gap": 16,
+    "page_size": "A4",
+    "orientation": "landscape",
+    "page_break_after_each": False,
+    "margins": (24, 24, 36, 36),
+}
+
+html = tentags.multitable_html(tables, settings=HTML_SETTINGS)
+tentags.multitable_xlsx(tables, settings=XLSX_SHEETS_SETTINGS)
+tentags.multitable_xlsx(tables, settings=XLSX_STACKED_SETTINGS)
+tentags.multitable_pdf(tables, settings=PDF_SETTINGS)
+```
+
 ---
 
 ## 4. Django — Template Tags

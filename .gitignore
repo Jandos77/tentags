@@ -55,3 +55,4 @@ venv.bak/
 test_output.html
 django_project/
 fastapi/
+flask/

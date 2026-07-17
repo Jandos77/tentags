@@ -1,0 +1,9 @@
+Period,Revenue,Expenses,Profit,Status
+January,125000,82000,43000,Closed
+February,132500,87500,45000,Closed
+March,141200,91300,49900,Closed
+April,138000,94500,43500,Closed
+May,152400,98200,54200,Closed
+June,160750,104300,56450,Closed
+July,158900,109100,49800,Review
+August,171300,112800,58500,Forecast
