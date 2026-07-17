@@ -1,9 +1,10 @@
 import sqlite3
 import tentags
 import os
+from demo_paths import demo_output_path
 
 def setup_database_and_get_rows():
-    db_filename = "company.db"
+    db_filename = demo_output_path("company.db")
     
     # Recreate clean SQLite database file for demonstration
     if os.path.exists(db_filename):
@@ -106,7 +107,7 @@ def main():
     table_model = tentags.parse(expr)
     html_output = tentags.render_html(table_model)
     
-    output_filename = "db_report.html"
+    output_filename = demo_output_path("db_report.html")
     with open(output_filename, "w", encoding="utf-8") as f:
         f.write(html_output)
     print(f"Success! HTML report saved as: {output_filename}")

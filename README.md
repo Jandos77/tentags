@@ -306,6 +306,15 @@ Checks the availability of optional rendering backends. Returns a dictionary:
 }
 ```
 
+#### `tentags.get_promt(print_output: bool = False) -> str`
+Returns the bundled LLM bootstrap prompt for teaching another model how to work with TenTags. Pass `print_output=True` to also print it:
+```python
+import tentags
+
+prompt = tentags.get_promt()
+tentags.get_promt(print_output=True)
+```
+
 #### `tentags.validate(formula: str) -> dict`
 Syntactically checks a TenTags formula's layout configuration and markup tag balance. Returns a status dictionary:
 - Success: `{"status": "ok", "message": "Syntax OK"}`
@@ -368,7 +377,7 @@ The same serializer pattern is useful for database-backed reports:
 import sqlite3
 import tentags
 
-conn = sqlite3.connect("finance.db")
+conn = sqlite3.connect("demo_output/finance.db")
 conn.row_factory = sqlite3.Row
 records = [dict(row) for row in conn.execute("SELECT period, revenue, status FROM monthly_report")]
 conn.close()
@@ -478,7 +487,7 @@ COLUMNS = {
 }
 
 HTML_SETTINGS = {
-    "output": "combined_report.html",
+    "output": "demo_output/combined_report.html",
     "table_order": TABLE_ORDER,
     "columns": COLUMNS,
     "tables_per_row": 2,
@@ -490,7 +499,7 @@ HTML_SETTINGS = {
 }
 
 XLSX_SHEETS_SETTINGS = {
-    "output": "combined_sheets.xlsx",
+    "output": "demo_output/combined_sheets.xlsx",
     "table_order": TABLE_ORDER,
     "columns": COLUMNS,
     "tables_per_sheet": 1,
@@ -498,7 +507,7 @@ XLSX_SHEETS_SETTINGS = {
 }
 
 XLSX_STACKED_SETTINGS = {
-    "output": "combined_stacked.xlsx",
+    "output": "demo_output/combined_stacked.xlsx",
     "table_order": TABLE_ORDER,
     "columns": COLUMNS,
     "tables_per_sheet": "all",
@@ -509,7 +518,7 @@ XLSX_STACKED_SETTINGS = {
 }
 
 PDF_SETTINGS = {
-    "output": "combined_report.pdf",
+    "output": "demo_output/combined_report.pdf",
     "table_order": TABLE_ORDER,
     "columns": COLUMNS,
     "tables_per_row": "auto",
@@ -639,12 +648,12 @@ To run the standalone test suite:
 python -m pytest
 ```
 
-Generated output files include:
-- `test_output.html` — Summary HTML report of all rendered tables
-- `test_output.xlsx` — Basic Excel table
-- `test_style_output.xlsx` — Excel with styling tags
-- `Q3_Financial_Dashboard.xlsx` / `.pdf` — Financial dashboard in Excel and PDF
-- `Enterprise_Budget_Matrix.xlsx` / `.pdf` — Enterprise budget matrix in Excel and PDF
+Generated output files are written under `demo_output/`, including:
+- `demo_output/test_output.html` — Summary HTML report of all rendered tables
+- `demo_output/test_output.xlsx` — Basic Excel table
+- `demo_output/test_style_output.xlsx` — Excel with styling tags
+- `demo_output/Q3_Financial_Dashboard.xlsx` / `.pdf` — Financial dashboard in Excel and PDF
+- `demo_output/Enterprise_Budget_Matrix.xlsx` / `.pdf` — Enterprise budget matrix in Excel and PDF
 
 > PDF files require `pip install tentags[pdf]` (ReportLab).
 

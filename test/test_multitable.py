@@ -1,4 +1,5 @@
 import tentags
+from demo_paths import demo_output_path
 
 def test_multitable():
     print("--- Test 9 (Multi-Table Rendering) ---")
@@ -35,25 +36,29 @@ def test_multitable():
     # --- HTML MULTITABLE ---
     print("\n[HTML] Rendering Grid Layout...")
     html_grid = tentags.multitable_html(tables_list, layout="grid", cols=2, gap="30px", full_page=True)
-    with open("multitable_report.html", "w", encoding="utf-8") as f:
+    html_output = demo_output_path("multitable_report.html")
+    with open(html_output, "w", encoding="utf-8") as f:
         f.write(html_grid)
-    print("HTML multitable saved as: multitable_report.html")
+    print(f"HTML multitable saved as: {html_output}")
 
     # --- EXCEL MULTITABLE (Sheets Mode) ---
     print("\n[Excel] Generating separate sheets...")
-    tentags.multitable_xlsx(tables_list, "multitable_sheets.xlsx", mode="sheets")
-    print("Excel workbook (sheets) saved as: multitable_sheets.xlsx")
+    sheets_output = demo_output_path("multitable_sheets.xlsx")
+    tentags.multitable_xlsx(tables_list, sheets_output, mode="sheets")
+    print(f"Excel workbook (sheets) saved as: {sheets_output}")
 
     # --- EXCEL MULTITABLE (Stacked Mode) ---
     print("\n[Excel] Generating stacked sheet...")
-    tentags.multitable_xlsx(tables_list, "multitable_stacked.xlsx", mode="stacked", gap=3)
-    print("Excel workbook (stacked) saved as: multitable_stacked.xlsx")
+    stacked_output = demo_output_path("multitable_stacked.xlsx")
+    tentags.multitable_xlsx(tables_list, stacked_output, mode="stacked", gap=3)
+    print(f"Excel workbook (stacked) saved as: {stacked_output}")
 
     # --- PDF MULTITABLE ---
     print("\n[PDF] Generating multi-page document...")
     try:
-        tentags.multitable_pdf(tables_list, "multitable_report.pdf", page_size="A4", orientation="portrait", page_break_after_each=False )
-        print("PDF document saved as: multitable_report.pdf")
+        pdf_output = demo_output_path("multitable_report.pdf")
+        tentags.multitable_pdf(tables_list, pdf_output, page_size="A4", orientation="portrait", page_break_after_each=False )
+        print(f"PDF document saved as: {pdf_output}")
     except ImportError as e:
         print(f"Skipping PDF export: {e}")
 

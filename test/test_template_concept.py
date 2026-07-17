@@ -1,8 +1,9 @@
 import sqlite3
 import tentags
+from demo_paths import demo_output_path
 
 # Demo database. Replace with your own SQLite file.
-conn = sqlite3.connect("sales.db")
+conn = sqlite3.connect(demo_output_path("sales.db"))
 conn.execute("DROP TABLE IF EXISTS sales")
 conn.execute("CREATE TABLE sales (product TEXT, q1_sales INT, q2_sales INT, status TEXT)")
 conn.executemany(
@@ -65,4 +66,3 @@ table_definition = f"""{total_rows},{cols},1,"#e2e8f0","solid",0,30, data(
 html = tentags.render(table_definition)
 
 print(html)
-

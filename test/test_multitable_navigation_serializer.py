@@ -6,11 +6,12 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 import tentags
+from demo_paths import demo_output_path
 
 
-HTML_OUTPUT = PROJECT_ROOT / "demo_multitable_navigation.html"
-XLSX_OUTPUT = PROJECT_ROOT / "demo_multitable_navigation.xlsx"
-PDF_OUTPUT = PROJECT_ROOT / "demo_multitable_navigation.pdf"
+HTML_OUTPUT = demo_output_path("demo_multitable_navigation.html")
+XLSX_OUTPUT = demo_output_path("demo_multitable_navigation.xlsx")
+PDF_OUTPUT = demo_output_path("demo_multitable_navigation.pdf")
 
 
 def _tables():
@@ -136,7 +137,7 @@ def build_multitable_navigation_serializer_artifacts():
     return HTML_OUTPUT, XLSX_OUTPUT, PDF_OUTPUT
 
 
-def test_multitable_navigation_serializer_outputs_files_in_project_root():
+def test_multitable_navigation_serializer_outputs_files_in_demo_output():
     html_output, xlsx_output, pdf_output = build_multitable_navigation_serializer_artifacts()
 
     html = html_output.read_text(encoding="utf-8")

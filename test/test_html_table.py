@@ -1,5 +1,6 @@
 import tentags
 import os
+from demo_paths import demo_output_path
 
 def generate_beautiful_demo():
 
@@ -147,13 +148,13 @@ def generate_beautiful_demo():
         </div>
 
         <div class="footer">
-            Generated using TenTags library. File saved as <strong>beautiful_report.html</strong>.
+            Generated using TenTags library. File saved as <strong>demo_output/beautiful_report.html</strong>.
         </div>
     </div>
 </body>
 </html>"""
 
-    filename = "beautiful_report.html"
+    filename = demo_output_path("beautiful_report.html")
     with open(filename, "w", encoding="utf-8") as f:
         f.write(beautiful_html)
     

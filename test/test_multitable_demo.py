@@ -9,6 +9,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 import tentags
+from demo_paths import demo_output_path
 
 TABLE_ORDER = [
     "Dashboard!Menu",
@@ -25,7 +26,7 @@ TABLE_COLUMN_SETTINGS = {
 }
 
 HTML_SETTINGS = {
-    "output": PROJECT_ROOT / "multitable_demo.html",
+    "output": demo_output_path("multitable_demo.html"),
     "table_order": TABLE_ORDER,
     "columns": TABLE_COLUMN_SETTINGS,
     "tables_per_row": 2,
@@ -37,14 +38,14 @@ HTML_SETTINGS = {
 }
 
 XLSX_SHEETS_SETTINGS = {
-    "output": PROJECT_ROOT / "multitable_demo.xlsx",
+    "output": demo_output_path("multitable_demo.xlsx"),
     "table_order": TABLE_ORDER,
     "columns": TABLE_COLUMN_SETTINGS,
     "mode": "sheets",
 }
 
 XLSX_STACKED_SETTINGS = {
-    "output": PROJECT_ROOT / "multitable_demo_stacked.xlsx",
+    "output": demo_output_path("multitable_demo_stacked.xlsx"),
     "table_order": TABLE_ORDER,
     "columns": TABLE_COLUMN_SETTINGS,
     "tables_per_sheet": "all",
@@ -55,7 +56,7 @@ XLSX_STACKED_SETTINGS = {
 }
 
 PDF_SETTINGS = {
-    "output": PROJECT_ROOT / "multitable_demo.pdf",
+    "output": demo_output_path("multitable_demo.pdf"),
     "table_order": TABLE_ORDER,
     "columns": TABLE_COLUMN_SETTINGS,
     "tables_per_row": "auto",

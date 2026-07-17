@@ -9,6 +9,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 import tentags
+from demo_paths import demo_output_path
 from tentags.addressing import AddressResolver, AddressType, parse_address
 
 
@@ -133,11 +134,11 @@ def _multitable_address_tables():
 
 
 def build_external_resolver_artifacts():
-    html_output = PROJECT_ROOT / "external_resolver_navigation.html"
-    xlsx_output = PROJECT_ROOT / "external_resolver_navigation.xlsx"
-    stacked_xlsx_output = PROJECT_ROOT / "external_resolver_navigation_stacked.xlsx"
-    pdf_output = PROJECT_ROOT / "external_resolver_navigation.pdf"
-    multitable_pdf_output = PROJECT_ROOT / "multitable_addressing.pdf"
+    html_output = demo_output_path("external_resolver_navigation.html")
+    xlsx_output = demo_output_path("external_resolver_navigation.xlsx")
+    stacked_xlsx_output = demo_output_path("external_resolver_navigation_stacked.xlsx")
+    pdf_output = demo_output_path("external_resolver_navigation.pdf")
+    multitable_pdf_output = demo_output_path("multitable_addressing.pdf")
 
     tables = _multitable_address_tables()
 
@@ -188,7 +189,7 @@ def test_multitable_html_maps_scoped_goto_to_pycells_table_list_mark():
 
 def test_multitable_xlsx_maps_scoped_goto_to_pycells_table_list():
     openpyxl = pytest.importorskip("openpyxl")
-    output = PROJECT_ROOT / "external_resolver_navigation.xlsx"
+    output = demo_output_path("external_resolver_navigation.xlsx")
     if output.exists():
         output.unlink()
 
@@ -205,7 +206,7 @@ def test_multitable_xlsx_maps_scoped_goto_to_pycells_table_list():
 
 def test_multitable_renderers_accept_real_table_and_list_names():
     openpyxl = pytest.importorskip("openpyxl")
-    output = PROJECT_ROOT / "real_name_resolver_navigation.xlsx"
+    output = demo_output_path("real_name_resolver_navigation.xlsx")
     if output.exists():
         output.unlink()
 
@@ -242,7 +243,7 @@ def test_multitable_supports_cell_range_and_mark_addresses_in_html():
 
 def test_each_multitable_list_has_own_preamble_style_and_data():
     openpyxl = pytest.importorskip("openpyxl")
-    output = PROJECT_ROOT / "multitable_own_preamble_style_data.xlsx"
+    output = demo_output_path("multitable_own_preamble_style_data.xlsx")
     if output.exists():
         output.unlink()
 
@@ -274,7 +275,7 @@ def test_each_multitable_list_has_own_preamble_style_and_data():
 
 def test_multitable_xlsx_sheets_supports_cell_range_and_mark_addresses():
     openpyxl = pytest.importorskip("openpyxl")
-    output = PROJECT_ROOT / "multitable_addressing_sheets.xlsx"
+    output = demo_output_path("multitable_addressing_sheets.xlsx")
     if output.exists():
         output.unlink()
 
@@ -301,7 +302,7 @@ def test_multitable_xlsx_sheets_supports_cell_range_and_mark_addresses():
 
 def test_multitable_xlsx_stacked_supports_cell_range_and_mark_addresses():
     openpyxl = pytest.importorskip("openpyxl")
-    output = PROJECT_ROOT / "multitable_addressing_stacked.xlsx"
+    output = demo_output_path("multitable_addressing_stacked.xlsx")
     if output.exists():
         output.unlink()
 

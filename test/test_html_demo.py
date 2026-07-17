@@ -1,4 +1,5 @@
 import tentags
+from demo_paths import demo_output_path
 
 def run_demo():
     # ANSI escape codes for beautiful terminal output formatting
@@ -40,7 +41,7 @@ def run_demo():
     print(f"--------------------------------------------------\n")
 
     # 4. Save to file for manual viewing
-    filename = "demo_output.html"
+    filename = demo_output_path("demo_output.html")
     with open(filename, "w", encoding="utf-8") as f:
         f.write(f"""<!DOCTYPE html>
 <html>

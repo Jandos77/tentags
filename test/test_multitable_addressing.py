@@ -12,14 +12,15 @@ if str(TEST_ROOT) not in sys.path:
     sys.path.insert(0, str(TEST_ROOT))
 
 import tentags
+from demo_paths import demo_output_path
 from test_external_address_resolver import _multitable_address_tables
 
 
 def build_multitable_addressing_artifacts():
-    html_output = PROJECT_ROOT / "multitable_addressing.html"
-    xlsx_output = PROJECT_ROOT / "multitable_addressing_sheets.xlsx"
-    stacked_xlsx_output = PROJECT_ROOT / "multitable_addressing_stacked.xlsx"
-    pdf_output = PROJECT_ROOT / "multitable_addressing.pdf"
+    html_output = demo_output_path("multitable_addressing.html")
+    xlsx_output = demo_output_path("multitable_addressing_sheets.xlsx")
+    stacked_xlsx_output = demo_output_path("multitable_addressing_stacked.xlsx")
+    pdf_output = demo_output_path("multitable_addressing.pdf")
 
     tables = _multitable_address_tables()
 
@@ -37,9 +38,9 @@ def build_multitable_addressing_artifacts():
 
 
 def build_multitable_format_option_artifacts():
-    html_output = PROJECT_ROOT / "multitable_layout_options.html"
-    stacked_xlsx_output = PROJECT_ROOT / "multitable_layout_options_stacked.xlsx"
-    pdf_output = PROJECT_ROOT / "multitable_layout_options_landscape.pdf"
+    html_output = demo_output_path("multitable_layout_options.html")
+    stacked_xlsx_output = demo_output_path("multitable_layout_options_stacked.xlsx")
+    pdf_output = demo_output_path("multitable_layout_options_landscape.pdf")
 
     tables = _multitable_address_tables()
 

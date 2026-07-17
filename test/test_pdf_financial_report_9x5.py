@@ -8,6 +8,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 import tentags
+from demo_paths import demo_output_path
 
 
 def build_pdf_financial_report_9x5():
@@ -142,7 +143,7 @@ August,
     assert model.cells[0][0].raw_expr == "Period"
     assert model.cells[8][4].raw_expr == "Forecast"
 
-    output = PROJECT_ROOT / "financial_report_9x5.pdf"
+    output = demo_output_path("financial_report_9x5.pdf")
     if output.exists():
         output.unlink()
 

@@ -358,7 +358,7 @@ This pattern reads records from a database, builds Python matrices, serializes t
 import sqlite3
 import tentags
 
-conn = sqlite3.connect("finance.db")
+conn = sqlite3.connect("demo_output/finance.db")
 conn.row_factory = sqlite3.Row
 records = [
     dict(row)
@@ -407,11 +407,11 @@ data = tentags.serialize.data(data_rows, expected_rows=len(data_rows), expected_
 
 model = tentags.compile(preamble, style, data)
 
-with open("financial_report.html", "w", encoding="utf-8") as f:
+with open("demo_output/financial_report.html", "w", encoding="utf-8") as f:
     f.write(tentags.render_html(model))
 
-tentags.render_pdf(model, "financial_report.pdf")
-tentags.render_xlsx(model, "financial_report.xlsx")
+tentags.render_pdf(model, "demo_output/financial_report.pdf")
+tentags.render_xlsx(model, "demo_output/financial_report.xlsx")
 ```
 
 For a database-driven multitable report, build one serialized table dictionary per query:
@@ -434,7 +434,7 @@ def table_from_query(conn, document, table_name, sheet_name, title, sql, columns
         "data": tentags.serialize.data(rows, expected_rows=len(rows), expected_cols=len(columns)),
     }
 
-conn = sqlite3.connect("business.db")
+conn = sqlite3.connect("demo_output/business.db")
 
 tables = [
     table_from_query(
@@ -458,7 +458,7 @@ tables = [
 ]
 
 tentags.multitable_html(tables, settings={
-    "output": "db_multitable_report.html",
+    "output": "demo_output/db_multitable_report.html",
     "table_order": ["Dashboard!Menu", "Invoice!Items"],
     "tables_per_row": 2,
     "layout": "grid",
@@ -502,7 +502,7 @@ COLUMNS = {
 }
 
 HTML_SETTINGS = {
-    "output": "multitable_demo.html",
+    "output": "demo_output/multitable_demo.html",
     "table_order": TABLE_ORDER,
     "columns": COLUMNS,
     "tables_per_row": 2,
@@ -514,7 +514,7 @@ HTML_SETTINGS = {
 }
 
 XLSX_SHEETS_SETTINGS = {
-    "output": "multitable_demo.xlsx",
+    "output": "demo_output/multitable_demo.xlsx",
     "table_order": TABLE_ORDER,
     "columns": COLUMNS,
     "tables_per_sheet": 1,
@@ -522,7 +522,7 @@ XLSX_SHEETS_SETTINGS = {
 }
 
 XLSX_STACKED_SETTINGS = {
-    "output": "multitable_demo_stacked.xlsx",
+    "output": "demo_output/multitable_demo_stacked.xlsx",
     "table_order": TABLE_ORDER,
     "columns": COLUMNS,
     "tables_per_sheet": "all",
@@ -533,7 +533,7 @@ XLSX_STACKED_SETTINGS = {
 }
 
 PDF_SETTINGS = {
-    "output": "multitable_demo.pdf",
+    "output": "demo_output/multitable_demo.pdf",
     "table_order": TABLE_ORDER,
     "columns": COLUMNS,
     "tables_per_row": "auto",

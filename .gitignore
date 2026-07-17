@@ -50,6 +50,7 @@ env.bak/
 venv.bak/
 
 # Generated output files from tests
+demo_output/
 *.xlsx
 *.pdf
 test_output.html

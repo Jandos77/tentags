@@ -1,5 +1,5 @@
 import tentags
-import os
+from demo_paths import demo_output_path
 
 def generate_beautiful_demo():
 
@@ -12,7 +12,7 @@ def generate_beautiful_demo():
     )'''
 
     table_model = tentags.parse(expr)
-    output_filename = "beautiful_report.xlsx"
+    output_filename = demo_output_path("beautiful_report.xlsx")
     tentags.render_xlsx(table_model, output_filename)
     print(f"Excel table generated successfully and saved as: {output_filename}")
 

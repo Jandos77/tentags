@@ -1,5 +1,5 @@
 import tentags
-import os
+from demo_paths import demo_output_path
 
 def generate_beautiful_demo():
 
@@ -12,13 +12,12 @@ def generate_beautiful_demo():
     )'''
 
     table_model = tentags.parse(expr)
-    output_filename = "beautiful_report.pdf"
+    output_filename = demo_output_path("beautiful_report.pdf")
     try:
-        tentags.render_pdf(table_model, output_filename)
+        tentags.render_pdf(table_model, str(output_filename))
         print(f"PDF table generated successfully and saved as: {output_filename}")
     except ImportError as e:
         print(f"Failed to generate PDF: {e}")
 
 if __name__ == "__main__":
     generate_beautiful_demo()
-

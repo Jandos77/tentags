@@ -7,6 +7,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 import tentags
+from demo_paths import demo_output_path
 from tentags.addressing import AddressType
 
 
@@ -36,7 +37,7 @@ def build_pdf_one_column_25_rows_with_goto_links():
     assert '<a href="#tt-A25"' in html
     assert '<a href="#tt-A1"' in html
 
-    output = PROJECT_ROOT / "one_column_goto_links.pdf"
+    output = demo_output_path("one_column_goto_links.pdf")
     if output.exists():
         output.unlink()
 

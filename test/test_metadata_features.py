@@ -1,6 +1,7 @@
 import tentags
 from pathlib import Path
 import re
+from demo_paths import demo_output_path
 
 try:
     import tomllib
@@ -58,6 +59,7 @@ def test_metadata_features():
     assert tentags.__license__ == pyproject["project"]["license"]
     assert tentags.__copyright__ == "Copyright (c) 2026 Zhandos Mambetali"
     assert tentags.__url__ == "https://tentags.org"
+    assert "get_promt" in tentags.__all__
     
     # 2. Check info()
     print("\n--- Running tentags.info() ---")
@@ -89,11 +91,27 @@ def test_metadata_features():
     
     # 5. Check demo()
     print("\n--- Running tentags.demo() ---")
-    tentags.demo("dashboard", filepath_prefix="test_demo")
-    tentags.demo("invoice", filepath_prefix="test_demo")
-    tentags.demo("table", filepath_prefix="test_demo")
+    demo_prefix = str(demo_output_path("test_demo"))
+    tentags.demo("dashboard", filepath_prefix=demo_prefix)
+    tentags.demo("invoice", filepath_prefix=demo_prefix)
+    tentags.demo("table", filepath_prefix=demo_prefix)
     
     print("\nAll metadata & diagnostic helper tests passed successfully!")
+
+
+def test_get_promt_returns_bundled_llm_bootstrap_prompt(capsys):
+    prompt = tentags.get_promt()
+
+    assert isinstance(prompt, str)
+    assert "TenTags LLM Bootstrap Prompt" in prompt
+    assert "TenTags is currently 2.1.0" in prompt
+    assert prompt == tentags.get_prompt()
+
+    printed_prompt = tentags.get_promt(print_output=True)
+    captured = capsys.readouterr()
+
+    assert printed_prompt == prompt
+    assert captured.out == prompt + "\n"
 
 if __name__ == "__main__":
     test_metadata_features()

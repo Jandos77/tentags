@@ -1,4 +1,5 @@
 import tentags
+from demo_paths import demo_output_path
 
 def test():
     # 1. Test basic nested row and column merges
@@ -39,7 +40,7 @@ def test():
     print("\n--- Test 5 (Excel XLSX Renderer API): ---")
     expr_xlsx = '3,4,1,"#000","solid",1, data(#,<rm>Date</rm>,Name,Job;1,<rm>10.07.2026</rm><cm>,Jone</cm>,None; ,,Piter)'
     model_xlsx = tentags.parse(expr_xlsx)
-    output_filename = "test_output.xlsx"
+    output_filename = demo_output_path("test_output.xlsx")
     tentags.render_xlsx(model_xlsx, output_filename)
     print(f"Excel table generated successfully and saved as: {output_filename}")
 
@@ -51,8 +52,9 @@ def test():
     print(html_style)
 
     model_style = tentags.parse(expr_style)
-    tentags.render_xlsx(model_style, "test_style_output.xlsx")
-    print("Excel table with custom fonts and fills saved as: test_style_output.xlsx")
+    style_output_filename = demo_output_path("test_style_output.xlsx")
+    tentags.render_xlsx(model_style, style_output_filename)
+    print(f"Excel table with custom fonts and fills saved as: {style_output_filename}")
 
     # 6.2 Check typography and alignment tags <fs>, <left>, <center>, <right>
     print("\n--- Test 6.2 (Typography & Alignment: fs, left, center, right): ---")
@@ -61,8 +63,9 @@ def test():
     print("Rendered HTML with alignment and font size:")
     print(html_align)
     model_align = tentags.parse(expr_align)
-    tentags.render_xlsx(model_align, "test_align_output.xlsx")
-    print("Excel table with alignment and font size saved as: test_align_output.xlsx")
+    align_output_filename = demo_output_path("test_align_output.xlsx")
+    tentags.render_xlsx(model_align, align_output_filename)
+    print(f"Excel table with alignment and font size saved as: {align_output_filename}")
 
     # 6.3 Advanced showcase (Financial Dashboard)
     print("\n--- Test 6.3 (Advanced Showcase: Q3 Financial Dashboard): ---")
@@ -76,11 +79,13 @@ def test():
     print("Rendered HTML Dashboard:")
     print(html_dashboard)
     model_dashboard = tentags.parse(expr_dashboard)
-    tentags.render_xlsx(model_dashboard, "Q3_Financial_Dashboard.xlsx")
-    print("Excel dashboard table saved as: Q3_Financial_Dashboard.xlsx")
+    dashboard_xlsx_filename = demo_output_path("Q3_Financial_Dashboard.xlsx")
+    tentags.render_xlsx(model_dashboard, dashboard_xlsx_filename)
+    print(f"Excel dashboard table saved as: {dashboard_xlsx_filename}")
     try:
-        tentags.render_pdf(model_dashboard, "Q3_Financial_Dashboard.pdf")
-        print("PDF dashboard table saved as: Q3_Financial_Dashboard.pdf")
+        dashboard_pdf_filename = demo_output_path("Q3_Financial_Dashboard.pdf")
+        tentags.render_pdf(model_dashboard, str(dashboard_pdf_filename))
+        print(f"PDF dashboard table saved as: {dashboard_pdf_filename}")
     except ImportError as e:
         print(f"Skipping PDF dashboard export: {e}")
 
@@ -97,11 +102,13 @@ def test():
     print("Rendered HTML Matrix:")
     print(html_matrix)
     model_matrix = tentags.parse(expr_matrix)
-    tentags.render_xlsx(model_matrix, "Enterprise_Budget_Matrix.xlsx")
-    print("Excel matrix table saved as: Enterprise_Budget_Matrix.xlsx")
+    matrix_xlsx_filename = demo_output_path("Enterprise_Budget_Matrix.xlsx")
+    tentags.render_xlsx(model_matrix, matrix_xlsx_filename)
+    print(f"Excel matrix table saved as: {matrix_xlsx_filename}")
     try:
-        tentags.render_pdf(model_matrix, "Enterprise_Budget_Matrix.pdf")
-        print("PDF matrix table saved as: Enterprise_Budget_Matrix.pdf")
+        matrix_pdf_filename = demo_output_path("Enterprise_Budget_Matrix.pdf")
+        tentags.render_pdf(model_matrix, str(matrix_pdf_filename))
+        print(f"PDF matrix table saved as: {matrix_pdf_filename}")
     except ImportError as e:
         print(f"Skipping PDF matrix export: {e}")
 
@@ -235,7 +242,7 @@ def test():
 </body>
 </html>"""
     
-    html_filename = "test_output.html"
+    html_filename = demo_output_path("test_output.html")
     with open(html_filename, "w", encoding="utf-8") as f:
         f.write(html_template)
     print(f"Summary HTML report generated successfully and saved as: {html_filename}")
@@ -249,8 +256,9 @@ def test():
     )'''
     try:
         model_pdf = tentags.parse(expr_pdf)
-        tentags.render_pdf(model_pdf, "test_output.pdf")
-        print("PDF table generated successfully and saved as: test_output.pdf")
+        pdf_output_filename = demo_output_path("test_output.pdf")
+        tentags.render_pdf(model_pdf, str(pdf_output_filename))
+        print(f"PDF table generated successfully and saved as: {pdf_output_filename}")
     except ImportError as e:
         print(f"Skipping PDF export (reportlab not installed): {e}")
 

@@ -1,5 +1,6 @@
 import pytest
 import tentags
+from demo_paths import demo_output_path
 
 def test_basic_html_rendering():
     # Test simple grid without merges or tags
@@ -218,9 +219,9 @@ def test_decoupled_style_and_data():
     assert cell_1_1.styles.get('text-align') == "right"
 
     # Also test PDF and Excel generation do not fail
-    tentags.render_xlsx(model, "test_decoupled_output.xlsx")
+    tentags.render_xlsx(model, demo_output_path("test_decoupled_output.xlsx"))
     try:
-        tentags.render_pdf(model, "test_decoupled_output.pdf")
+        tentags.render_pdf(model, str(demo_output_path("test_decoupled_output.pdf")))
     except ImportError:
         pass
 

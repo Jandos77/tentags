@@ -7,6 +7,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 import tentags
+from demo_paths import DEMO_OUTPUT_DIR
 
 
 STATUS_COLORS = {
@@ -323,8 +324,8 @@ def test_serializer_multitable_from_sqlite_db(tmp_path):
 
 
 if __name__ == "__main__":
-    single_outputs = build_single_db_report(PROJECT_ROOT)
-    multitable_outputs = build_multitable_db_report(PROJECT_ROOT)
+    single_outputs = build_single_db_report(DEMO_OUTPUT_DIR)
+    multitable_outputs = build_multitable_db_report(DEMO_OUTPUT_DIR)
     for output in [*single_outputs, *multitable_outputs]:
         data = output.read_bytes()
         assert len(data) > 100

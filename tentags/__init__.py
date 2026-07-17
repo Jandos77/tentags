@@ -54,6 +54,7 @@ Multiple Tables:
 
 Utilities:
   demo()             Generate sample documents
+  get_promt()        Return the bundled LLM bootstrap prompt
   info()             Display system diagnostic info
   features()         Check available render backends
 
@@ -99,6 +100,8 @@ __all__ = [
     "DEFAULT_MULTITABLE_PDF_SETTINGS",
     "features",
     "info",
+    "get_promt",
+    "get_prompt",
     "validate",
     "demo",
     "build_mark_index",
@@ -2718,6 +2721,41 @@ def info() -> None:
     print(f"{'✓' if feats['xlsx'] else '✗'} XLSX")
     print("✓ Validation")
     print("✓ Demo")
+
+def get_promt(print_output: bool = False) -> str:
+    """
+    Return the bundled TenTags LLM bootstrap prompt.
+
+    The misspelled name is kept intentionally because it is the public API
+    requested by users. Pass print_output=True to also print the prompt.
+    """
+    from importlib import resources as _resources
+    resource_name = "TENTAGS_LLM_BOOTSTRAP_PROMPT.md"
+
+    try:
+        try:
+            prompt = (
+                _resources.files(__package__)
+                .joinpath(resource_name)
+                .read_text(encoding="utf-8")
+            )
+        except AttributeError:
+            with _resources.open_text(__package__, resource_name, encoding="utf-8") as f:
+                prompt = f.read()
+    except (FileNotFoundError, ModuleNotFoundError):
+        prompt_path = _os.path.join(_os.path.dirname(_os.path.dirname(__file__)), resource_name)
+        with open(prompt_path, "r", encoding="utf-8") as f:
+            prompt = f.read()
+
+    if print_output:
+        print(prompt)
+    return prompt
+
+def get_prompt(print_output: bool = False) -> str:
+    """
+    Correctly spelled alias for get_promt().
+    """
+    return get_promt(print_output=print_output)
 
 def validate(formula: str) -> dict:
     """

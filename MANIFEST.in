@@ -1,3 +1,4 @@
 include README.md
 include EXAMPLES.md
+include TENTAGS_LLM_BOOTSTRAP_PROMPT.md
 include LICENSE
