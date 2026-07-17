@@ -64,7 +64,7 @@ Public API stability:
 - Preserve old behavior unless the user explicitly asks for a breaking change.
 
 Current version:
-TenTags is currently 2.1.3. Do not change version metadata unless explicitly asked.
+TenTags is currently 2.1.4. Do not change version metadata unless explicitly asked.
 
 Bundled prompt API:
 - The installed library exposes this bootstrap prompt through `tentags.get_prompt()`.
@@ -142,7 +142,7 @@ Important tag warnings:
 - <mark=Summary> is a single tag. Never write </mark>.
 - Correct: <mark=Summary><b>Summary</b>
 - Wrong: <mark=Summary><b>Summary</b></mark>
-- In style(...), a cell can be text-empty but still meaningful if it contains active or closing tags such as <bg=#eff6ff></bg></u></left>. Count it as a real style cell/row.
+- In style(...), a cell can be text-empty but still meaningful if it contains tags such as <left><u><bg=#eff6ff></bg></u></left>. Count it as a real style cell/row.
 - Never delete or ignore the last style row just because it has no visible text. It may carry styles for the matching data row.
 - <url=goto:Table!List!A1> can be used for external navigation.
 - <url=goto:Table!List!Summary> can be used for external navigation to a mark.
@@ -154,9 +154,9 @@ Correct multiline style/data overlay:
 ```python
 preamble = '3,1,1,"#0f172a","solid",0,24'
 style = """style(
-<left><u><bg=#dbeafe><color=#1e3a8a><b></b></color></bg>;
-<bg=#eff6ff></bg>;
-<bg=#eff6ff></bg></u></left>
+<left><u><bg=#dbeafe><color=#1e3a8a><b></b></color></bg></u></left>;
+<left><u><bg=#eff6ff></bg></u></left>;
+<left><u><bg=#eff6ff></bg></u></left>
 )"""
 data = """data(
 <url=goto:Invoice!Items!A4>Open invoice item</url>;
@@ -166,7 +166,7 @@ data = """data(
 model = tentags.compile(preamble, style, data)
 ```
 
-The third data row has visible text and a goto link. The third style row has no text, but it is valid because it carries background styling and closes active underline/left tags.
+The third data row has visible text and a goto link. The third style row has no text, but it is valid because it carries left alignment, underline, and background styling.
 
 Canonical runnable single-table example:
 

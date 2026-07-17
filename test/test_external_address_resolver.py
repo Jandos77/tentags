@@ -76,9 +76,9 @@ def _multitable_address_tables():
             "preamble": '3,1,1,"#0f172a","solid-0",0,24',
             "style": """
                 style(
-                    <left><u><bg=#dbeafe><color=#1e3a8a><b></b></color></bg>;
-                    <bg=#eff6ff></bg>;
-                    <bg=#eff6ff></bg></u></left>
+                    <left><u><bg=#dbeafe><color=#1e3a8a><b></b></color></bg></u></left>;
+                    <left><u><bg=#eff6ff></bg></u></left>;
+                    <left><u><bg=#eff6ff></bg></u></left>
                 )
             """,
             "data": """

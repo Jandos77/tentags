@@ -10,55 +10,316 @@
 [![Python versions](https://img.shields.io/pypi/pyversions/tentags.svg)](https://pypi.org/project/tentags/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-**TenTags** is a declarative template language and **Intermediate Representation (IR)** for automated **HTML**, **Excel (`.xlsx`)**, and **PDF** table and document generation.
+**TenTags** is a declarative template language and **Intermediate Representation (IR)** for **HTML**, **Excel (`.xlsx`)**, and **PDF** table and document generation.
 
-### 🚀 Current Release: 2.1.3
+### 🚀 Current Release: 2.1.4
 
-**TenTags 2.1.3** is a bugfix release that preserves multiline `style(...)` rows whose cells contain only tags and no text. This keeps style overlays correct for open tags spanning several rows, while preserving the Serializer API, Addressing Model, and Multitable Layout introduced in 2.1.0.
+**TenTags 2.1.4** is a release that synchronizes package version configuration and demo environment requirements, preserving the core multiline style fixes, Serializer API, and Multitable Layout controls.
 
-### 💡 Why TenTags? (A Language for Programs & AI, Not Manual Editing)
+## Install
 
-While general markup formats are designed for *humans* to manually write text, **TenTags** is designed specifically as a **Template DSL for programs, server engines, and AI agents**.
-
-Whether you are building backend report pipelines, ERP/CRM accounting modules, invoice generators, or LLM-driven document agents, generating clean TenTags strings via loops and f-strings is orders of magnitude simpler and safer than emitting verbose HTML strings with inline `style=""` or hundreds of lines of `openpyxl` / `reportlab` API calls:
-
-```python
-# Programmatically generate high-fidelity reports with dynamic loops and f-strings:
-formula = f'''
-5,4,1,"#ccc","solid",0,40, data(
-    <bg=#1e293b><color=white><b><cm>{report_title}, , , </cm></b></color></bg>;
-    {generated_rows_from_db}
-)'''
+```bash
+pip install tentags
 ```
 
-### ⚙️ Compiler & Data Pipeline Architecture
+Optional XLSX and PDF backends are described later in the installation section.
 
-At its core, **TenTags** is a unified **Intermediate Representation (IR)** table compiler. Rather than manually writing long static strings, you generate TenTags formulas dynamically in your Python backend (e.g. from ORM models or database cursors), parse them into a `TableModel` AST, and compile them to any target format:
+---
+
+## Start Here: The Three Blocks
+
+TenTags syntax is intentionally small. A table is described by only three blocks:
 
 ```text
-   Database / API
-         ↓
-    ORM / SQL / Objects
-         ↓
-  f-strings / Templates
-         ↓
-   TenTags Formula
-         ↓
-  [ Lexer ➔ Parser ]
-         ↓
-   TableModel (IR)
-      ↙  ↓  ↘
-   HTML Excel PDF  [Future: DOCX, SVG, Flutter...]
+preamble
+style(...)
+data(...)
 ```
 
-- 🎯 **Target Audience**: Backend developers (FastAPI, Django, Flask), ERP/CRM financial engines, automated invoice/receipt generators, and AI/LLM agents.
-- 🤖 **AI & LLM Native**: LLMs generate exact, compact TenTags formulas reliably without CSS layout bugs or Excel/PDF API hallucinations.
-- 🔀 **Declarative Grid Merges**: Effortlessly merge cells rightward across columns (`<cm>`) and downward across rows (`<rm>`).
-- 🎨 **Rich Typography & Styling**: Inline control over font size (`<fs>`), bold (`<b>`), italic (`<i>`), alignment (`<left>`, `<center>`, `<right>`), text color (`<color=>`), and cell fills (`<bg=>`).
-- 📊 **Triple Backend Rendering**: Directly compile your IR to high-fidelity **HTML** (`render_html`), native **Excel (`.xlsx`)** (`render_xlsx`), or vector **PDF (`.pdf`)** (`render_pdf`).
-- ⚡ **Lightweight & Modular Runtime**: Pure Python runtime (`xml.etree.ElementTree`) for DSL tokenization and HTML rendering. Optional Excel export (`openpyxl`) and PDF export (`reportlab`).
+The recommended form is:
 
-### 🧭 Language Evolution Rule
+```python
+import tentags
+
+preamble = '3,3,1,"#cbd5e1","solid-1",0,28'
+
+style = """style(
+<bg=blue><color=white><b></b></color></bg>, <bg=blue><color=white><b></b></color></bg>, <bg=blue><color=white><b></b></color></bg>;
+<bg=white></bg>, <bg=white></bg>, <bg=green></bg>;
+<bg=#f8fafc></bg>, <bg=#f8fafc></bg>, <bg=yellow></bg>
+)"""
+
+data = """data(
+Product, Q1 Sales, Status;
+Laptops, <right>12000</right>, <center>Excellent</center>;
+Headphones, <right>3500</right>, <center>Good</center>
+)"""
+
+model = tentags.compile(preamble, style, data)
+```
+
+The same compiled model can be rendered to HTML, XLSX, or PDF.
+
+---
+
+## 1. Preamble
+
+The preamble is the first line of a TenTags table. It defines the shape and global grid settings.
+
+```text
+rows, cols, border_width, "border_color", "border_style", stretch, cell_height
+```
+
+Example:
+
+```text
+3,3,1,"#cbd5e1","solid-1",0,28
+```
+
+| Position | Argument | Meaning |
+| :---: | :--- | :--- |
+| 1 | `rows` | Number of table rows. |
+| 2 | `cols` | Number of table columns. |
+| 3 | `border_width` | Border width in pixels. |
+| 4 | `border_color` | Border color. You can use names such as `"blue"` or HEX such as `"#cbd5e1"`. |
+| 5 | `border_style` | `solid`, `dashed`, `dotted`; suffix `-1` enables inner grid borders, suffix `-0` hides borders. |
+| 6 | `stretch` | `0` keeps fixed row height, `1` allows cells to stretch. |
+| 7 | `cell_height` | Default row height in pixels. |
+
+The first two arguments must match your table grid. For example, `3,3,...` means that `style(...)` and `data(...)` should each describe 3 rows and 3 columns.
+
+---
+
+## 2. Style Block
+
+The `style(...)` block describes presentation: background colors, text colors, font weight, alignment, merges, and other visual rules.
+
+Rows are separated by semicolons (`;`). Columns are separated by commas (`,`):
+
+```text
+style(
+row1_col1, row1_col2, row1_col3;
+row2_col1, row2_col2, row2_col3;
+row3_col1, row3_col2, row3_col3
+)
+```
+
+Example:
+
+```python
+style = """style(
+<bg=blue><color=white><b></b></color></bg>, <bg=blue><color=white><b></b></color></bg>, <bg=blue><color=white><b></b></color></bg>;
+<bg=white></bg>, <bg=white></bg>, <bg=green></bg>;
+<bg=#f8fafc></bg>, <bg=#f8fafc></bg>, <bg=yellow></bg>
+)"""
+```
+
+Colors can be simple names such as `blue`, `green`, `white`, and `yellow`, or exact HEX values such as `#1977ff` and `#f8fafc`.
+
+In `style(...)`, a cell may contain only tags and no text. That is normal:
+
+```text
+<left><u><bg=#eff6ff></bg></u></left>
+```
+
+This still counts as a real style cell because it carries presentation for the matching `data(...)` cell.
+
+---
+
+## 3. Tags
+
+Tags can be used in `style(...)` and `data(...)`. In `style(...)`, tags usually describe presentation for a cell. In `data(...)`, tags usually wrap real content.
+
+| Tag | Meaning | Example |
+|---|---|---|
+| `<b>...</b>` | Bold text. | `<b>Total</b>` |
+| `<i>...</i>` | Italic text. | `<i>Pending</i>` |
+| `<u>...</u>` | Underlined text. | `<u>Open</u>` |
+| `<s>...</s>` | Strikethrough text. | `<s>Cancelled</s>` |
+| `<fs=...>` | Font size. | `<fs=16>Title</fs>` |
+| `<left>` | Left alignment. | `<left>Name</left>` |
+| `<center>` | Center alignment. | `<center>Status</center>` |
+| `<right>` | Right alignment. | `<right>12000</right>` |
+| `<color=...>` | Text color. | `<color=green>OK</color>` |
+| `<bg=...>` | Cell background. | `<bg=yellow>Review</bg>` |
+| `<cm>...</cm>` | Merge cells horizontally. | `<cm>Title, ,</cm>` |
+| `<rm>...</rm>` | Merge cells vertically. | `<rm>Date</rm>` |
+| `<url=...>...</url>` | Link or navigation target. | `<url=https://tentags.org>Site</url>` |
+| `<mark=...>` | Single tag that marks the current cell. | `<mark=Summary><b>Total</b>` |
+| `<url=goto:...>...</url>` | Navigates to a marked cell or address. | `<url=goto:Summary>Go to total</url>` |
+| `<img src=... w=... h=... m=...>` | Single image tag. `w`, `h`, and `m` are pixels; `m` means margin on all sides. `h=auto` keeps proportions. | `<img src=logo.png w=120 h=auto m=15>` |
+| `<value=...>` | Insert value from a local cell or mark. | `<value=B2>` |
+
+Single tags such as `<mark=...>`, `<img ...>`, and `<value=...>` are not closed.
+
+---
+
+## 4. Data Block
+
+The `data(...)` block describes the actual table content. It uses the same grid rules as `style(...)`:
+
+```text
+data(
+row1_col1, row1_col2, row1_col3;
+row2_col1, row2_col2, row2_col3;
+row3_col1, row3_col2, row3_col3
+)
+```
+
+Example:
+
+```python
+data = """data(
+Product, Q1 Sales, Status;
+Laptops, <right>12000</right>, <center>Excellent</center>;
+Headphones, <right>3500</right>, <center>Good</center>
+)"""
+```
+
+The first value goes to cell `A1`, the second to `B1`, the third to `C1`. After `;`, the next row starts: `A2`, `B2`, `C2`, and so on.
+
+For every explicit table:
+
+```text
+preamble rows == style rows == data rows
+preamble cols == style cols == data cols
+```
+
+---
+
+## 5. One-Line Formula
+
+TenTags also supports the original compact form: preamble and `data(...)` in one formula string.
+
+```python
+import tentags
+
+formula = '2,3,1,"#cbd5e1","solid-1",0,28,data(Product,Q1 Sales,Status;Laptops,<right>12000</right>,<center>Excellent</center>)'
+
+model = tentags.parse(formula)
+html = tentags.render_html(model)
+```
+
+The same formula can be written across several lines for readability:
+
+```python
+formula = '''2,3,1,"#cbd5e1","solid-1",0,28,data(
+Product, Q1 Sales, Status;
+Laptops, <right>12000</right>, <center>Excellent</center>
+)'''
+
+model = tentags.parse(formula)
+```
+
+The separated `preamble`, `style(...)`, and `data(...)` form is recommended for larger tables because styles and data are easier to maintain independently.
+
+---
+
+## 6. Render One Table To Files
+
+```python
+import tentags
+
+preamble = '3,3,1,"#cbd5e1","solid-1",0,28'
+
+style = """style(
+<bg=blue><color=white><b></b></color></bg>, <bg=blue><color=white><b></b></color></bg>, <bg=blue><color=white><b></b></color></bg>;
+<bg=white></bg>, <bg=white></bg>, <bg=green></bg>;
+<bg=#f8fafc></bg>, <bg=#f8fafc></bg>, <bg=yellow></bg>
+)"""
+
+data = """data(
+Product, Q1 Sales, Status;
+Laptops, <right>12000</right>, <center>Excellent</center>;
+Headphones, <right>3500</right>, <center>Good</center>
+)"""
+
+model = tentags.compile(preamble, style, data)
+
+html = tentags.render_html(model)
+with open("sales_report.html", "w", encoding="utf-8") as f:
+    f.write(html)
+
+tentags.render_xlsx(model, "sales_report.xlsx")
+tentags.render_pdf(model, "sales_report.pdf")
+```
+
+---
+
+## 7. Use Data From A Database
+
+TenTags does not need SQL, loops, or business logic inside the DSL. Use Python for data preparation, then serialize rows into TenTags.
+
+```python
+import sqlite3
+import tentags
+
+conn = sqlite3.connect(":memory:")
+conn.execute("CREATE TABLE sales (product TEXT, q1 INT, status TEXT)")
+conn.executemany(
+    "INSERT INTO sales VALUES (?, ?, ?)",
+    [
+        ("Laptops", 12000, "Excellent"),
+        ("Smartphones", 24000, "Excellent"),
+        ("Headphones", 3500, "Good"),
+    ],
+)
+
+records = conn.execute("SELECT product, q1, status FROM sales").fetchall()
+
+data_rows = [["Product", "Q1 Sales", "Status"]]
+style_lines = [
+    "<center><u><bg=blue><color=white><b></b></color></bg>, "
+    "<bg=blue><color=white><b></b></color></bg>, "
+    "<bg=blue><color=white><b></b></color></bg>"
+]
+
+for product, q1, status in records:
+    status_bg = "green" if status == "Excellent" else "yellow"
+    data_rows.append([
+        product,
+        f"<right>{q1}</right>",
+        f"<center>{status}</center>",
+    ])
+    style_lines.append(f"<bg=white></bg>, <bg=white></bg>, <bg={status_bg}></bg>")
+
+style_lines[-1] += "</u></center>"
+
+preamble = tentags.serialize.preamble(
+    len(data_rows),
+    3,
+    border_color="#cbd5e1",
+    border_style="solid-1",
+    cell_height=28,
+)
+style = "style(\n" + ";\n".join(style_lines) + "\n)"
+data = tentags.serialize.data(data_rows, expected_rows=len(data_rows), expected_cols=3)
+
+model = tentags.compile(preamble, style, data)
+tentags.render_xlsx(model, "sales_from_db.xlsx")
+```
+
+The important separation is:
+
+```text
+Python data -> TenTags DSL -> compile() -> IR -> HTML/PDF/XLSX
+```
+
+---
+
+## 8. What Comes Next
+
+After the basic three-block structure, TenTags also supports:
+
+- **MultiTable** reports: several separate tables/lists in one HTML, XLSX, or PDF output.
+- **Addressing** with `Table!List!A1`, `Table!List!A1:B3`, and `Table!List!Summary`.
+- **Navigation** with `<mark=Summary>` and `<url=goto:Table!List!Summary>Open</url>`.
+- **Framework integrations** for Django, Flask, FastAPI, and Jinja2.
+- **LLM bootstrap prompt** through `tentags.get_prompt()`.
+
+---
+
+## Design Principle
 
 A new TenTags tag may be added only if all three conditions are true:
 
@@ -70,143 +331,12 @@ This keeps TenTags compact, predictable, and renderer-independent.
 
 ---
 
-## ⚡ Quick Start: Programmatic Template Generation
-
-TenTags shines when generating formatted tabular documents dynamically from Python objects:
-
-```python
-import tentags
-
-# 1. Your raw data source (e.g., query results from database/ORM)
-employees = [
-    {"name": "Alice Vance", "salary": "$120,000", "dept": "Engineering"},
-    {"name": "Bob Miller", "salary": "$95,000", "dept": "Design"},
-    {"name": "Charlie R.", "salary": "$110,000", "dept": "Product"}
-]
-
-# 2. Define styled header
-header = (
-    '<fs=16><bg=#1e293b><color=white><b>Name</b></color></bg></fs>, '
-    '<fs=16><bg=#1e293b><color=white><b>Salary</b></color></bg></fs>, '
-    '<fs=16><bg=#1e293b><color=white><b>Department</b></color></bg></fs>'
-)
-
-# 3. Format body rows dynamically
-body_rows = ";\n".join(
-    f"<b>{e['name']}</b>, <right>{e['salary']}</right>, <bg=#f1f5f9>{e['dept']}</bg>"
-    for e in employees
-)
-
-# 4. Construct a complete formula with the preamble (rows, columns, borders, stretch, row height)
-formula = f'''
-{len(employees) + 1},3,1,"#cbd5e1","solid",0,40, data(
-    {header};
-    {body_rows}
-)
-'''
-
-# 5. Parse formula into Intermediate Representation (IR)
-model = tentags.parse(formula)
-
-# 6. Render to multiple backends
-html_table = tentags.render_html(model)
-tentags.render_xlsx(model, "Quarter_Report.xlsx")
-tentags.render_pdf(model, "Quarter_Report.pdf")
-```
-
-The same parsed model can be rendered as HTML, Excel (`.xlsx`), or PDF.
-
----
-
-## ⚙️ Formula Structure & Decoupled Presentation (TenTags v0.2.0+)
-
-A TenTags formula consists of the **Preamble** (which defines global table structure, grid borders, and sizing) followed by either a single **Data Block** (legacy format), or decoupled **Style** and **Data** blocks (recommended for template reuse):
-
-### 1. Unified Format (Legacy / Simple Tables)
-```text
- 1   2   3      4         5     6   7
- ──  ──  ──  ───────   ───────  ─  ──
- 4 , 4 , 1 ,"#cbd5e1","solid", 0, 45, data(...)
-```
-
-### 2. Decoupled Template Format (v0.2.0+)
-```text
- 4 , 4 , 1 ,"#cbd5e1","solid", 0, 45, style(...), data(...)
-```
-During compilation, the engine overlays the layout and formatting rules defined in `style(...)` (alignments, fonts, backgrounds, column/row merges) onto the raw content defined in `data(...)`.
-
-| Position | Parameter | Type | Description |
-| :---: | :--- | :--- | :--- |
-| **1** | `rows` | `int` | The total number of rows in the table grid. |
-| **2** | `cols` | `int` | The total number of columns in the table grid. |
-| **3** | `border_width` | `int` | The width of the grid lines in pixels. |
-| **4** | `border_color` | `str` | HEX color string (e.g. `"#cbd5e1"`, `#1977ff`) or CSS name (e.g. `green`, `blue`). Can be written with or without quotes. |
-| **5** | `border_style` | `str` | Style of the grid lines (`solid`, `dashed`, or `dotted`). Suffix `-1` (e.g. `solid-1`) enables inner grid borders. Suffix `-0` (e.g. `dashed-0`) hides both outer and inner borders (borderless). Default (no suffix) draws only the outer border. Can be written with or without quotes. |
-| **6** | `stretch` | `int` | Auto-stretching behavior. `0` maintains fixed cell heights, `1` stretches the grid. |
-| **7** | `cell_height` | `int` | Default height of each row in pixels. |
-
-Following these preamble parameters, the formula is completed by either the `data(...)` block or a pair of `style(...)` and `data(...)` blocks, where cells are defined row-by-row, separated by semicolons (`;`) and columns separated by commas (`,`).
-
----
-
-## 🏷️ Tags in `style(...)` and `data(...)`
-
-TenTags derives its name from the **10 core structural and styling tags** supported inside `style(...)` and `data(...)` blocks:
-
-| # | Tag / Syntax | Type | Description | Example |
-|---|---|---|---|---|
-| 1 | `<fs=...>` | Typography | Sets custom font size (`font-size` in HTML, `size` in Excel `openpyxl`). | `data(<fs=16>Heading</fs>, Text)` |
-| 2 | `<b>...</b>` | Typography | Renders cell text in **Bold** font weight (`font-weight: bold`). | `data(<b>Total</b>, 100)` |
-| 3 | `<i>...</i>` | Typography | Renders cell text in *Italic* font style (`font-style: italic`). | `data(<i>Pending</i>, Done)` |
-| 4 | `<left>` | Alignment | Aligns cell content to the **left** (`text-align: left`). | `data(<left>Left aligned text)` |
-| 5 | `<center>` | Alignment | Aligns cell content to the **center** (`text-align: center`). | `data(<center>Centered text)` |
-| 6 | `<right>` | Alignment | Aligns cell content to the **right** (`text-align: right`). | `data(<right>Right aligned $5,000)` |
-| 7 | `<color=...>` | Text Color | Sets custom HEX or CSS text color (`color: ...` / font color). | `data(<color=#ef4444>Error</color>, OK)` |
-| 8 | `<bg=...>` | Background Fill | Sets cell background fill color (`background-color: ...` / PatternFill). | `data(<bg=#f8fafc>Summary</bg>, $500)` |
-| 9 | `<cm>...</cm>` | Column Merge | Joins adjacent cells horizontally. HTML suppresses the internal border; Excel and PDF create native merged regions. | `data(<cm>Merged Title, ,</cm>; A, B)` |
-| 10 | `<rm>...</rm>` | Row Merge | Joins cells vertically. Mark each participating cell with `<rm>`. | `data(<rm>Date</rm>, Job; <rm> </rm>, Engineer)` |
-
-> **Note on Tag Transfer & Empty Elements**: Notice how empty elements (such as `, ,` or `, ;`) are used when adjacent cells are absorbed by a `<cm>` horizontal merge or `<rm>` vertical merge. TenTags automatically transfers and preserves all active tags across cell boundaries without requiring explicit `None` placeholders.
-
-> **Important for `style(...)` rows**: A style cell may be empty by text but still meaningful because it carries active or closing tags, for example `<bg=#eff6ff></bg></u></left>`. Versions before **2.1.3** could incorrectly drop a final styled-empty row in multiline `style(...)` blocks. In 2.1.3 and later, these rows are preserved; when writing tests or LLM prompts, count them as real style rows.
-
-Additional supported tags:
-
-| Tag / Syntax | Description | Example |
-|---|---|---|
-| `<u>...</u>` | Underlines text. | `data(<u>Underlined</u>)` |
-| `<s>...</s>` | Strikes through text. | `data(<s>Cancelled</s>)` |
-| `<url=...>...</url>` | Creates a hyperlink. | `data(<url=https://example.com>Open site</url>)` |
-| `<img src=... w=... h=... m=...>` | Adds a single image tag. `m` is margin in pixels. With `stretch=1`, the cell can grow with the image; with `stretch=0`, image height is forced to the preamble cell height and width becomes `auto`. | `data(<img src=logo.png w=120 h=auto m=15>)` |
-
----
-
 ## 📦 Installation
 
 Install from PyPI via pip:
 
 ```bash
 pip install tentags
-```
-
-For **Excel (`.xlsx`)** export, install the optional `excel` dependency:
-
-```bash
-pip install tentags[excel]
-# or directly: pip install openpyxl
-```
-
-For **PDF (`.pdf`)** export, install the optional `pdf` dependency:
-
-```bash
-pip install tentags[pdf]
-# or directly: pip install reportlab
-```
-
-To install **all optional backends** at once:
-
-```bash
-pip install tentags[all]
 ```
 
 ---
@@ -285,8 +415,8 @@ tentags.render_pdf(model, "Enterprise_Budget_Matrix.pdf")
 ## 🛠️ API Reference
 
 ### Module Constants & Metadata
-- **`tentags.__version__`**: Library version string (e.g., `'2.1.3'`).
-- **`tentags.version_info`**: Version tuple for checking compatibility (e.g., `(2, 1, 3)`).
+- **`tentags.__version__`**: Library version string (e.g., `'2.1.4'`).
+- **`tentags.version_info`**: Version tuple for checking compatibility (e.g., `(2, 1, 4)`).
 - **`tentags.__author__`**: Author name (`'Zhandos Mambetali'`).
 - **`tentags.__license__`**: Project license (`'Apache-2.0'`).
 - **`tentags.__homepage__`**: Link to home website (`'https://tentags.org'`).
@@ -351,6 +481,24 @@ The Serializer API converts ordinary Python structures into canonical TenTags DS
 
 The canonical namespace is `tentags.serialize`. Top-level `dumps_preamble()`, `dumps_style()`, and `dumps_data()` remain available as compatible convenience aliases.
 
+In the Python list below, quotes are only Python string syntax. They are not part of TenTags DSL. The serializer outputs plain TenTags cells without quotes.
+
+This example deliberately keeps `style` as raw TenTags DSL, because TenTags styles can open a tag in one cell and close it later, allowing a tag to apply across a larger table region.
+
+For LLMs and fully automatic generation, `tentags.serialize.style(...)` is still useful. It serializes a Python style matrix into `style(...)`. Use it when each generated cell already has its own complete style expression:
+
+```python
+style_rows = [
+    ["<bg=blue><color=white><b></b></color></bg>"] * 3,
+    ["<bg=white></bg>", "<bg=white></bg>", "<bg=green></bg>"],
+    ["<bg=#f8fafc></bg>", "<bg=#f8fafc></bg>", "<bg=yellow></bg>"],
+]
+
+style = tentags.serialize.style(style_rows, expected_rows=3, expected_cols=3)
+```
+
+Use raw `style(...)` when you want TenTags tags to span across a larger region. Use `tentags.serialize.style(...)` when generated code benefits from a simple explicit matrix.
+
 ```python
 import tentags
 
@@ -360,17 +508,26 @@ rows = [
     ["July", "<right>158900</right>", "<center>Review</center>"],
 ]
 
-style_rows = [
-    ["<bg=#0f172a><color=#ffffff><b></b></color></bg>"] * 3,
-    ["<bg=#ffffff></bg>", "<bg=#ffffff></bg>", "<bg=#dcfce7></bg>"],
-    ["<bg=#f8fafc></bg>", "<bg=#f8fafc></bg>", "<bg=#fef3c7></bg>"],
-]
+style = """style(
+<center><u><bg=blue><color=white><b></b></color></bg>, <bg=blue><color=white><b></b></color></bg>, <bg=blue><color=white><b></b></color></bg>;
+<bg=white></bg>, <bg=white></bg>, <bg=green></bg>;
+<bg=#f8fafc></bg>, <bg=#f8fafc></bg>, <bg=yellow></bg></u></center>
+)"""
 
 preamble = tentags.serialize.preamble(len(rows), 3, border_color="#64748b", border_style="solid-1", cell_height=28)
-style = tentags.serialize.style(style_rows, expected_rows=len(rows), expected_cols=3)
 data = tentags.serialize.data(rows, expected_rows=len(rows), expected_cols=3)
 
 model = tentags.compile(preamble, style, data)
+```
+
+The generated `data` string is:
+
+```text
+data(
+Period,<right>Revenue</right>,<center>Status</center>;
+January,<right>125000</right>,<center>Closed</center>;
+July,<right>158900</right>,<center>Review</center>
+)
 ```
 
 The same serializer pattern is useful for database-backed reports:
@@ -385,19 +542,25 @@ records = [dict(row) for row in conn.execute("SELECT period, revenue, status FRO
 conn.close()
 
 data_rows = [["Period", "<right>Revenue</right>", "<center>Status</center>"]]
-style_rows = [["<bg=#0f172a><color=#ffffff><b></b></color></bg>"] * 3]
+style_lines = [
+    "<center><u><bg=blue><color=white><b></b></color></bg>, "
+    "<bg=blue><color=white><b></b></color></bg>, "
+    "<bg=blue><color=white><b></b></color></bg>"
+]
 
 for index, record in enumerate(records):
-    base_bg = "#ffffff" if index % 2 == 0 else "#f8fafc"
+    base_bg = "white" if index % 2 == 0 else "#f8fafc"
     data_rows.append([
         record["period"],
         f"<right>{record['revenue']}</right>",
         f"<center>{record['status']}</center>",
     ])
-    style_rows.append([f"<bg={base_bg}></bg>"] * 3)
+    style_lines.append(f"<bg={base_bg}></bg>, <bg={base_bg}></bg>, <bg={base_bg}></bg>")
+
+style_lines[-1] += "</u></center>"
 
 preamble = tentags.serialize.preamble(len(data_rows), 3, border_color="#64748b", border_style="solid-1", cell_height=28)
-style = tentags.serialize.style(style_rows, expected_rows=len(data_rows), expected_cols=3)
+style = "style(\n" + ";\n".join(style_lines) + "\n)"
 data = tentags.serialize.data(data_rows, expected_rows=len(data_rows), expected_cols=3)
 model = tentags.compile(preamble, style, data)
 ```
@@ -446,7 +609,7 @@ table_definition = {
 
 Use named export settings for file output, table order, column validation, and renderer layout. These settings are part of the library API and are passed with `settings=...`.
 
-The Serializer API also works inside multitable items. Each table dictionary can receive `preamble`, `style`, and `data` generated by `tentags.serialize.preamble()`, `tentags.serialize.style()`, and `tentags.serialize.data()`.
+The Serializer API also works inside multitable items. Each table dictionary can receive `preamble` and `data` generated by `tentags.serialize.preamble()` and `tentags.serialize.data()`. `style` can remain raw TenTags DSL when you want tags to span across a larger table region.
 
 ```python
 import tentags
@@ -456,11 +619,6 @@ menu_rows = [
     ["Invoice", "<url=goto:Invoice!Items!A1>Open invoice</url>"],
 ]
 
-menu_style = [
-    ["<bg=#dbeafe><b></b></bg>", "<bg=#dbeafe><b></b></bg>"],
-    ["<bg=#eff6ff></bg>", "<bg=#eff6ff></bg>"],
-]
-
 tables = [
     {
         "document": "Dashboard",
@@ -468,7 +626,7 @@ tables = [
         "sheet_name": "Menu",
         "title": "Dashboard Menu",
         "preamble": tentags.serialize.preamble(len(menu_rows), 2, border_color="#0f172a", border_style="solid", cell_height=24),
-        "style": tentags.serialize.style(menu_style, expected_rows=len(menu_rows), expected_cols=2),
+        "style": "style(<center><u><bg=#dbeafe><b></b></bg>, <bg=#dbeafe><b></b></bg>; <bg=#eff6ff></bg>, <bg=#eff6ff></bg></u></center>)",
         "data": tentags.serialize.data(menu_rows, expected_rows=len(menu_rows), expected_cols=2),
     },
     {

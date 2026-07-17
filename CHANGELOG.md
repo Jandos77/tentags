@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.1.4] - 2026-07-17
+
+### Fixed
+- Synchronized package version configuration and metadata across the root and demo subprojects.
+- Updated FastAPI and Flask demo requirements and hardcoded version strings to use the latest version.
+- Overwrote older copies of `TENTAGS_LLM_BOOTSTRAP_PROMPT.md` in the demo projects with the actual root prompt file.
+
 ---
 
 ## [2.1.3] - 2026-07-17
@@ -80,14 +87,14 @@ Serializer API, Addressing Model, and Multitable Layout.
   `_Union[str, _Any]`. Fixed to be consistent with all other type annotations in the file.
 
 > **Removed from PyPI** due to a defect discovered after publication.
-> Use the latest stable **2.1.3** release instead.
+> Use the latest stable **2.1.4** release instead.
 
 ---
 
 ## [2.0.0] - yanked
 
 > **Removed from PyPI** due to `NameError: Union is not defined` on Python 3.13+ at import.  
-> Use the latest stable **2.1.3** release instead.
+> Use the latest stable **2.1.4** release instead.
 
 ### Added (carried into 2.0.2 and later)
 - `<u>` tag — underline text (HTML inline CSS, XLSX `Font(underline="single")`, PDF `UNDERLINE`)
@@ -108,7 +115,7 @@ Serializer API, Addressing Model, and Multitable Layout.
 ## [1.1.4] - yanked
 
 > **Removed from PyPI** — contained the same `NameError: Union is not defined` bug on Python 3.13+.
-> Use the latest stable **2.1.3** release instead.
+> Use the latest stable **2.1.4** release instead.
 
 ---
 

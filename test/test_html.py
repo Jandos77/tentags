@@ -273,9 +273,9 @@ def test_trailing_styled_empty_style_row_is_preserved():
         '3,1,1,"#ccc","solid",0,24',
         """
         style(
-            <left><u><bg=#dbeafe><color=#1e3a8a><b></b></color></bg>;
-            <bg=#eff6ff></bg>;
-            <bg=#eff6ff></bg></u></left>
+            <left><u><bg=#dbeafe><color=#1e3a8a><b></b></color></bg></u></left>;
+            <left><u><bg=#eff6ff></bg></u></left>;
+            <left><u><bg=#eff6ff></bg></u></left>
         )
         """,
         """
