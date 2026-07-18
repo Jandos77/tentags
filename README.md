@@ -12,9 +12,9 @@
 
 **TenTags** is a declarative template language and **Intermediate Representation (IR)** for **HTML**, **Excel (`.xlsx`)**, and **PDF** table and document generation.
 
-### 🚀 Current Release: 2.1.5
+### 🚀 Current Release: 2.1.6
 
-**TenTags 2.1.5** adds renderer-independent `scale(...)` control for relative row heights and column widths, including HTML, XLSX, PDF, MultiTable, and Serializer API support.
+**TenTags 2.1.6** aligns `cm/rm` behavior across HTML, XLSX, and PDF: internal grid lines are hidden while every logical cell retains its content, style, link, mark, and address. It also includes the renderer-independent `scale(...)` geometry introduced in 2.1.5.
 
 ## Install
 
@@ -42,6 +42,24 @@ preamble
 style(...)
 data(...)
 ```
+
+### Geometry / Presentation / Content
+
+These three blocks have separate responsibilities:
+
+```text
+Geometry      -> preamble + scale(...)
+Presentation  -> style(...)
+Content       -> data(...)
+```
+
+| Layer | TenTags block | Responsibility |
+| :--- | :--- | :--- |
+| **Geometry** | `preamble`, including optional `scale(...)` | Defines table topology, borders, stretching, base row height, and relative row and column proportions. |
+| **Presentation** | `style(...)` | Defines colors, typography, alignment, merging, and other visual appearance. |
+| **Content** | `data(...)` | Defines text, images, links, marks, values, and their positions in the logical grid. |
+
+This separation keeps the document model declarative and renderer-independent. For example, `scale(C1=1,5)` means that column C should be the widest relative column; it does not encode an HTML percentage, an XLSX width, or a PDF point value. Each renderer maps the same logical geometry to its own physical format.
 
 The recommended form is:
 
@@ -238,8 +256,8 @@ Tags can be used in `style(...)` and `data(...)`. In `style(...)`, tags usually 
 | `<right>` | Right alignment. | `<right>12000</right>` |
 | `<color=...>` | Text color. | `<color=green>OK</color>` |
 | `<bg=...>` | Cell background. | `<bg=yellow>Review</bg>` |
-| `<cm>...</cm>` | Merge cells horizontally. | `<cm>Title, ,</cm>` |
-| `<rm>...</rm>` | Merge cells vertically. | `<rm>Date</rm>` |
+| `<cm>...</cm>` | Hide internal vertical grid lines across consecutive cells. Every cell keeps its own content. | `<cm>Title, Subtitle, Total</cm>` |
+| `<rm>...</rm>` | Hide internal horizontal grid lines across consecutive rows. Every cell keeps its own content. | `<rm>Start</rm>` |
 | `<url=...>...</url>` | Link or navigation target. | `<url=https://tentags.org>Site</url>` |
 | `<mark=...>` | Single tag that marks the current cell. | `<mark=Summary><b>Total</b>` |
 | `<url=goto:...>...</url>` | Navigates to a marked cell or address. | `<url=goto:Summary>Go to total</url>` |
@@ -453,7 +471,7 @@ pip install tentags
 
 ## 🎨 Advanced Example: Beautiful Styled Table & Merges
 
-Here is how a single, clean **TenTags** expression generates an enterprise-grade financial dashboard table featuring merged headers (`<cm>`), custom font sizing (`<fs>`), cell background colors (`<bg=>`), text alignment (`<left>`, `<right>`), and custom typography (`<b>`, `<i>`, `<color=>`) across both **HTML** and **Excel (`.xlsx`)**:
+Here is how a single, clean **TenTags** expression generates an enterprise-grade financial dashboard table featuring visually grouped headers (`<cm>`), custom font sizing (`<fs>`), cell background colors (`<bg=>`), text alignment (`<left>`, `<right>`), and custom typography (`<b>`, `<i>`, `<color=>`) across HTML, Excel, and PDF:
 
 ```python
 import tentags
@@ -469,7 +487,7 @@ formula = '''4,4,1,"#cbd5e1","solid",0,45, data(
 # Compile IR once — render to any backend
 model = tentags.parse(formula)
 
-# 1. Export to native Excel (.xlsx) with exact fonts, fills & merge_cells
+# 1. Export to native Excel (.xlsx) with exact fonts, fills, and grid visibility
 tentags.render_xlsx(model, "Q3_Financial_Dashboard.xlsx")
 
 # 2. Export to vector PDF (.pdf) via ReportLab
@@ -488,14 +506,14 @@ print(html_table)
 
 ---
 
-## 📊 Excel Matrix Example: Row Merges (`<rm>`), Column Merges (`<cm>`) & Colors
+## 📊 Excel Matrix Example: Row Groups (`<rm>`), Column Groups (`<cm>`) & Colors
 
-To see how **TenTags** shines as a native Excel spreadsheet generator, here is a 5x5 **Enterprise Allocation Matrix** utilizing combined row merges (`<rm>`), multi-column merges (`<cm>`), clean empty elements (` `, `, `), and classic Microsoft Excel color palettes (`#1F4E78`, `#DDEBF7`, `#E2EFDA`, `#FFF2CC`):
+To see how **TenTags** shines as a native Excel spreadsheet generator, here is a 5x5 **Enterprise Allocation Matrix** utilizing border-based row groups (`<rm>`), column groups (`<cm>`), clean empty elements (` `, `, `), and classic Microsoft Excel color palettes (`#1F4E78`, `#DDEBF7`, `#E2EFDA`, `#FFF2CC`). These tags hide internal grid lines without deleting the values or identities of participating cells:
 
 ```python
 import tentags
 
-# Define an Excel matrix with vertical row merges (<rm>) and horizontal column merges (<cm>)
+# Define an Excel matrix with vertical row groups (<rm>) and horizontal column groups (<cm>)
 excel_formula = '''5,5,1,"#B0C4DE","solid",0,35, data(
     <fs=16><bg=#1F4E78><color=white><b><cm>2026 Enterprise Budget & Allocation Matrix, , , , </cm></b></color></bg></fs>;
     <bg=#DDEBF7><b><rm><center>Category</center></rm></b></bg>, <bg=#DDEBF7><b><cm><center>Q1 & Q2 Allocation, </center></cm></b></bg>, <bg=#DDEBF7><b><cm><center>Q3 & Q4 Allocation, </center></cm></b></bg>;
@@ -525,8 +543,8 @@ tentags.render_pdf(model, "Enterprise_Budget_Matrix.pdf")
 ## 🛠️ API Reference
 
 ### Module Constants & Metadata
-- **`tentags.__version__`**: Library version string (e.g., `'2.1.5'`).
-- **`tentags.version_info`**: Version tuple for checking compatibility (e.g., `(2, 1, 5)`).
+- **`tentags.__version__`**: Library version string (e.g., `'2.1.6'`).
+- **`tentags.version_info`**: Version tuple for checking compatibility (e.g., `(2, 1, 6)`).
 - **`tentags.__author__`**: Author name (`'Zhandos Mambetali'`).
 - **`tentags.__license__`**: Project license (`'Apache-2.0'`).
 - **`tentags.__homepage__`**: Link to home website (`'https://tentags.org'`).
@@ -715,7 +733,7 @@ Renders a previously parsed `TableModel` instance into an HTML string.
 Exports a `TableModel` directly to an Excel `.xlsx` file using `openpyxl`. Applies `openpyxl.styles.Font` (bold, italic, color), `openpyxl.styles.PatternFill` (background color), and `openpyxl.styles.Border` according to the table formula. Requires `pip install tentags[excel]`.
 
 ### `tentags.render_pdf(model: TableModel, filepath_or_stream) -> None`
-Exports a `TableModel` directly to a vector **PDF** file using `ReportLab`. Translates IR coordinates, merged cell regions (`SPAN`), background fills (`BACKGROUND`), fonts, alignments, and border grids into native `ReportLab` `TableStyle` commands. Automatically selects portrait or landscape page orientation based on column count. Requires `pip install tentags[pdf]`.
+Exports a `TableModel` directly to a vector **PDF** file using `ReportLab`. Translates IR coordinates, selective grid visibility for `cm/rm`, background fills (`BACKGROUND`), fonts, alignments, and borders into native `ReportLab` `TableStyle` commands. Every logical cell retains its content and address. Automatically selects portrait or landscape page orientation based on column count. Requires `pip install tentags[pdf]`.
 
 ---
 

@@ -18,7 +18,7 @@ SCALE_DEMO_PREAMBLE = (
 )
 
 SCALE_DEMO_STYLE = """style(
-<center><bg=blue><color=white><b>, , , </b></color></bg>;
+<cm><center><bg=blue><color=white><b>, , , </b></color></bg></cm>;
 <bg=white>, , , </bg>;
 <bg=#f8fafc>, , , </bg>;
 <bg=white>, , , </bg>;

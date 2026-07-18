@@ -218,20 +218,22 @@ tentags.render('1,3,1,"black","solid",0,40, data(<left>Left</left>, <center>Cent
 
 ---
 
-### Cell Merging
+### Grid Grouping With `cm` And `rm`
 
 | Tag | Description |
 |---|---|
-| `<cm>text, , </cm>` | Joins N columns (one `,` per extra cell). HTML hides internal borders; Excel and PDF create native merged regions. |
-| `<rm>text</rm>` | Joins cells vertically. Mark each participating cell with `<rm>`. |
+| `<cm>A, B, C</cm>` | Hides vertical grid lines between consecutive cells. `A`, `B`, and `C` remain separate stored values. |
+| `<rm>A</rm>` | Hides horizontal grid lines between consecutive marked rows. Every row keeps its own value. |
 
 ```python
-# Merge 3 columns
-tentags.render('2,3,1,"black","solid",0,40, data(<cm>Header across 3 columns, , </cm>; A, B, C)')
+# Visually group 3 columns while preserving all three values
+tentags.render('2,3,1,"black","solid-1",0,40, data(<cm>Name, Description, Total</cm>; A, B, C)')
 
-# Merge 2 rows
-tentags.render('2,2,1,"black","solid",0,40, data(<rm>Merged cell</rm>, Right 1; <rm> </rm>, Right 2)')
+# Visually group 2 rows while preserving both left-column values
+tentags.render('2,2,1,"black","solid-1",0,40, data(<rm>Start</rm>, Right 1; <rm>End</rm>, Right 2)')
 ```
+
+`cm` and `rm` never authorize a renderer to replace cells with an XLSX merged range or a PDF `SPAN`. HTML, XLSX, and PDF must all preserve the original logical cell coordinates, content, styles, links, and marks; only the internal grid lines are hidden.
 
 ---
 
@@ -1115,7 +1117,7 @@ style    = '''style(
 
 entries = [
     ('<url=https://github.com/tentags>GitHub Repository</url>', 'Open Source', '<color=green>Active</color>'),
-    ('<url=https://pypi.org/project/tentags>PyPI Package</url>', 'v2.1.5',     '<u>Stable</u>'),
+    ('<url=https://pypi.org/project/tentags>PyPI Package</url>', 'v2.1.6',     '<u>Stable</u>'),
     ('<url=https://tentags.readthedocs.io>Documentation</url>',  'Read the Docs', '<color=blue>Online</color>'),
 ]
 rows = '; '.join(f'{link}, {badge}, {status}' for link, badge, status in entries)
@@ -1209,7 +1211,7 @@ async def sales_report(request: Request, db: Session = Depends(get_db)):
 | Font size | `<fs=N>` | Font size in px |
 | Color | `<color=...>`, `<bg=...>` | Text color / cell background |
 | Alignment | `<left>`, `<center>`, `<right>` | Horizontal text alignment |
-| Merging | `<cm>`, `<rm>` | Horizontal / vertical cell joining |
+| Grid grouping | `<cm>`, `<rm>` | Hide internal vertical / horizontal borders while preserving cells |
 | Link | `<url=https://...>` | Clickable hyperlink |
 | Image | `<img src=... w=... h=... m=...>` | Single image element |
 | Data | `csv("path")` | Inline CSV import |

@@ -8,6 +8,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.1.6] - 2026-07-18
+
+### Fixed
+- Aligned XLSX and PDF `cm/rm` behavior with HTML: internal grid lines are hidden without creating destructive native merged ranges or PDF spans, so every logical cell retains its content, style, link, mark, and address.
+
+---
+
 ## [2.1.5] - 2026-07-18
 
 ### Added
@@ -105,14 +112,14 @@ Serializer API, Addressing Model, and Multitable Layout.
   `_Union[str, _Any]`. Fixed to be consistent with all other type annotations in the file.
 
 > **Removed from PyPI** due to a defect discovered after publication.
-> Use the latest stable **2.1.5** release instead.
+> Use the latest stable **2.1.6** release instead.
 
 ---
 
 ## [2.0.0] - yanked
 
 > **Removed from PyPI** due to `NameError: Union is not defined` on Python 3.13+ at import.  
-> Use the latest stable **2.1.5** release instead.
+> Use the latest stable **2.1.6** release instead.
 
 ### Added (carried into 2.0.2 and later)
 - `<u>` tag — underline text (HTML inline CSS, XLSX `Font(underline="single")`, PDF `UNDERLINE`)
@@ -133,7 +140,7 @@ Serializer API, Addressing Model, and Multitable Layout.
 ## [1.1.4] - yanked
 
 > **Removed from PyPI** — contained the same `NameError: Union is not defined` bug on Python 3.13+.
-> Use the latest stable **2.1.5** release instead.
+> Use the latest stable **2.1.6** release instead.
 
 ---
 

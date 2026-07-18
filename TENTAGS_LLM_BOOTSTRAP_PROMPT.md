@@ -65,7 +65,7 @@ Public API stability:
 - Preserve old behavior unless the user explicitly asks for a breaking change.
 
 Current version:
-TenTags is currently 2.1.5. Do not change version metadata unless explicitly asked.
+TenTags is currently 2.1.6. Do not change version metadata unless explicitly asked.
 
 Bundled prompt API:
 - The installed library exposes this bootstrap prompt through `tentags.get_prompt()`.
@@ -178,6 +178,8 @@ Common tags:
 - <left>...</left>
 - <center>...</center>
 - <right>...</right>
+- <cm>...</cm> hides internal vertical grid lines across consecutive cells while preserving every cell and value.
+- <rm>...</rm> hides internal horizontal grid lines across consecutive rows while preserving every cell and value.
 - <url=https://example.com>Text</url>
 - <url=goto:A1>Text</url>
 - <url=goto:Table!List!A1>Text</url>
@@ -190,6 +192,9 @@ Common tags:
 - External <value=Table!List!A1> is reserved and should stay unsupported unless explicit resolver support is implemented.
 
 Important tag warnings:
+- cm and rm are border-visibility operations, not destructive physical merges.
+- HTML, XLSX, and PDF must preserve every participating cell's content, style, link, mark, and logical address.
+- Never implement cm/rm with openpyxl merge_cells(), ReportLab SPAN, HTML colspan/rowspan, or any operation that discards neighboring cell values.
 - <mark=Summary> is a single tag. Never write </mark>.
 - Correct: <mark=Summary><b>Summary</b>
 - Wrong: <mark=Summary><b>Summary</b></mark>

@@ -62,17 +62,17 @@ Website: https://tentags.org
 Documentation: https://tentags.org/docs
 GitHub: https://github.com/Jandos77/tentags
 
-Current Version: 2.1.5
+Current Version: 2.1.6
 License: Apache License 2.0
 """
 
-__version__ = "2.1.5"
+__version__ = "2.1.6"
 __author__ = "Zhandos Mambetali"
 __license__ = "Apache-2.0"
 __copyright__ = "Copyright (c) 2026 Zhandos Mambetali"
 __homepage__ = "https://tentags.org"
 __url__ = "https://tentags.org"
-version_info = (2, 1, 5)
+version_info = (2, 1, 6)
 
 __all__ = [
     "__version__",
@@ -1911,6 +1911,7 @@ def _write_model_to_sheet(
             cell_ref = ws.cell(row=start_row + r, column=c + 1)
             
             val = ""
+            cell = None
             cell_styles = {}
             images = []
             link = None
@@ -1957,15 +1958,37 @@ def _write_model_to_sheet(
                         pass
             
             if apply_to_inner:
-                cell_ref.border = Border(left=border_side, right=border_side, top=border_side, bottom=border_side)
+                left_s = border_side
+                right_s = border_side
+                top_s = border_side
+                bottom_s = border_side
             elif apply_to_outer:
                 left_s = border_side if c == 0 else Side()
                 right_s = border_side if c == model.cols - 1 else Side()
                 top_s = border_side if r == 0 else Side()
                 bottom_s = border_side if r == model.rows - 1 else Side()
-                cell_ref.border = Border(left=left_s, right=right_s, top=top_s, bottom=bottom_s)
             else:
-                cell_ref.border = Border()
+                left_s = Side()
+                right_s = Side()
+                top_s = Side()
+                bottom_s = Side()
+
+            if cell is not None:
+                if cell.border_flags & BorderFlags.HIDE_LEFT:
+                    left_s = Side()
+                if cell.border_flags & BorderFlags.HIDE_RIGHT:
+                    right_s = Side()
+                if cell.border_flags & BorderFlags.HIDE_TOP:
+                    top_s = Side()
+                if cell.border_flags & BorderFlags.HIDE_BOTTOM:
+                    bottom_s = Side()
+
+            cell_ref.border = Border(
+                left=left_s,
+                right=right_s,
+                top=top_s,
+                bottom=bottom_s,
+            )
 
             h_align = cell_styles.get('text-align', 'center')
             cell_ref.alignment = Alignment(horizontal=h_align, vertical='center', wrap_text=True)
@@ -2021,66 +2044,6 @@ def _write_model_to_sheet(
                         underline='single',
                         color='0563C1'  # Excel default hyperlink blue
                     )
-
-    # Find connected components of merged cells to apply spreadsheet merges
-    visited = set()
-    for r in range(model.rows):
-        for c in range(model.cols):
-            if (r, c) in visited:
-                continue
-                
-            component = []
-            queue = [(r, c)]
-            visited.add((r, c))
-            
-            while queue:
-                curr_r, curr_c = queue.pop(0)
-                component.append((curr_r, curr_c))
-                
-                # Check right neighbor
-                if curr_c < model.cols - 1:
-                    if curr_r < len(model.cells) and curr_c < len(model.cells[curr_r]):
-                        cell = model.cells[curr_r][curr_c]
-                        if cell.border_flags & BorderFlags.HIDE_RIGHT:
-                            if (curr_r, curr_c + 1) not in visited:
-                                visited.add((curr_r, curr_c + 1))
-                                queue.append((curr_r, curr_c + 1))
-                # Check left neighbor
-                if curr_c > 0:
-                    if curr_r < len(model.cells) and curr_c < len(model.cells[curr_r]):
-                        cell = model.cells[curr_r][curr_c]
-                        if cell.border_flags & BorderFlags.HIDE_LEFT:
-                            if (curr_r, curr_c - 1) not in visited:
-                                visited.add((curr_r, curr_c - 1))
-                                queue.append((curr_r, curr_c - 1))
-                # Check bottom neighbor
-                if curr_r < model.rows - 1:
-                    if curr_r < len(model.cells) and curr_c < len(model.cells[curr_r]):
-                        cell = model.cells[curr_r][curr_c]
-                        if cell.border_flags & BorderFlags.HIDE_BOTTOM:
-                            if (curr_r + 1, curr_c) not in visited:
-                                visited.add((curr_r + 1, curr_c))
-                                queue.append((curr_r + 1, curr_c))
-                # Check top neighbor
-                if curr_r > 0:
-                    if curr_r < len(model.cells) and curr_c < len(model.cells[curr_r]):
-                        cell = model.cells[curr_r][curr_c]
-                        if cell.border_flags & BorderFlags.HIDE_TOP:
-                            if (curr_r - 1, curr_c) not in visited:
-                                visited.add((curr_r - 1, curr_c))
-                                queue.append((curr_r - 1, curr_c))
-                                
-            if len(component) > 1:
-                min_r = min(x[0] for x in component)
-                max_r = max(x[0] for x in component)
-                min_c = min(x[1] for x in component)
-                max_c = max(x[1] for x in component)
-                ws.merge_cells(
-                    start_row=start_row + min_r, 
-                    start_column=min_c + 1, 
-                    end_row=start_row + max_r, 
-                    end_column=max_c + 1
-                )
 
 def render_xlsx(
     model: TableModel,
@@ -2152,54 +2115,33 @@ def _create_pdf_table_object(
     border_w = max(0.5, float(model.border_width))
     border_c = to_rl_color(model.border_color)
     if apply_to_inner:
-        table_styles.append(('GRID', (0, 0), (-1, -1), border_w, border_c))
+        table_styles.append(('BOX', (0, 0), (-1, -1), border_w, border_c))
+
+        for r in range(model.rows):
+            for c in range(1, model.cols):
+                left_cell = model.cells[r][c - 1] if r < len(model.cells) and c - 1 < len(model.cells[r]) else None
+                right_cell = model.cells[r][c] if r < len(model.cells) and c < len(model.cells[r]) else None
+                hidden = (
+                    (left_cell is not None and left_cell.border_flags & BorderFlags.HIDE_RIGHT)
+                    or (right_cell is not None and right_cell.border_flags & BorderFlags.HIDE_LEFT)
+                )
+                if not hidden:
+                    table_styles.append(('LINEBEFORE', (c, r), (c, r), border_w, border_c))
+
+        for r in range(1, model.rows):
+            for c in range(model.cols):
+                top_cell = model.cells[r - 1][c] if r - 1 < len(model.cells) and c < len(model.cells[r - 1]) else None
+                bottom_cell = model.cells[r][c] if r < len(model.cells) and c < len(model.cells[r]) else None
+                hidden = (
+                    (top_cell is not None and top_cell.border_flags & BorderFlags.HIDE_BOTTOM)
+                    or (bottom_cell is not None and bottom_cell.border_flags & BorderFlags.HIDE_TOP)
+                )
+                if not hidden:
+                    table_styles.append(('LINEABOVE', (c, r), (c, r), border_w, border_c))
     elif apply_to_outer:
         table_styles.append(('BOX', (0, 0), (-1, -1), border_w, border_c))
         
     table_styles.append(('VALIGN', (0, 0), (-1, -1), 'MIDDLE'))
-
-    # Calculate connected components of merged cells for SPAN commands
-    visited = set()
-    for r in range(model.rows):
-        for c in range(model.cols):
-            if (r, c) in visited:
-                continue
-            component = []
-            queue = [(r, c)]
-            visited.add((r, c))
-            while queue:
-                curr_r, curr_c = queue.pop(0)
-                component.append((curr_r, curr_c))
-                # right
-                if curr_c < model.cols - 1 and curr_r < len(model.cells) and curr_c < len(model.cells[curr_r]):
-                    if model.cells[curr_r][curr_c].border_flags & BorderFlags.HIDE_RIGHT:
-                        if (curr_r, curr_c + 1) not in visited:
-                            visited.add((curr_r, curr_c + 1))
-                            queue.append((curr_r, curr_c + 1))
-                # left
-                if curr_c > 0 and curr_r < len(model.cells) and curr_c < len(model.cells[curr_r]):
-                    if model.cells[curr_r][curr_c].border_flags & BorderFlags.HIDE_LEFT:
-                        if (curr_r, curr_c - 1) not in visited:
-                            visited.add((curr_r, curr_c - 1))
-                            queue.append((curr_r, curr_c - 1))
-                # bottom
-                if curr_r < model.rows - 1 and curr_r < len(model.cells) and curr_c < len(model.cells[curr_r]):
-                    if model.cells[curr_r][curr_c].border_flags & BorderFlags.HIDE_BOTTOM:
-                        if (curr_r + 1, curr_c) not in visited:
-                            visited.add((curr_r + 1, curr_c))
-                            queue.append((curr_r + 1, curr_c))
-                # top
-                if curr_r > 0 and curr_r < len(model.cells) and curr_c < len(model.cells[curr_r]):
-                    if model.cells[curr_r][curr_c].border_flags & BorderFlags.HIDE_TOP:
-                        if (curr_r - 1, curr_c) not in visited:
-                            visited.add((curr_r - 1, curr_c))
-                            queue.append((curr_r - 1, curr_c))
-            if len(component) > 1:
-                min_r = min(x[0] for x in component)
-                max_r = max(x[0] for x in component)
-                min_c = min(x[1] for x in component)
-                max_c = max(x[1] for x in component)
-                table_styles.append(('SPAN', (min_c, min_r), (max_c, max_r)))
 
     for r in range(model.rows):
         row_data = []
