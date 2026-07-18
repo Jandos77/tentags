@@ -106,7 +106,7 @@ def test_get_prompt_returns_bundled_llm_bootstrap_prompt(capsys):
 
     assert isinstance(prompt, str)
     assert "TenTags LLM Bootstrap Prompt" in prompt
-    assert "TenTags is currently 2.1.7" in prompt
+    assert "TenTags is currently 2.1.8" in prompt
 
     printed_prompt = tentags.get_prompt(print_output=True)
     captured = capsys.readouterr()

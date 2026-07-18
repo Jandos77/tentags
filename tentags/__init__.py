@@ -62,17 +62,17 @@ Website: https://tentags.org
 Documentation: https://tentags.org/docs
 GitHub: https://github.com/Jandos77/tentags
 
-Current Version: 2.1.7
+Current Version: 2.1.8
 License: Apache License 2.0
 """
 
-__version__ = "2.1.7"
+__version__ = "2.1.8"
 __author__ = "Zhandos Mambetali"
 __license__ = "Apache-2.0"
 __copyright__ = "Copyright (c) 2026 Zhandos Mambetali"
 __homepage__ = "https://tentags.org"
 __url__ = "https://tentags.org"
-version_info = (2, 1, 7)
+version_info = (2, 1, 8)
 
 __all__ = [
     "__version__",
@@ -917,9 +917,25 @@ def _pdf_font_names() -> dict:
         "/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf",
         "/Library/Fonts/Arial Bold.ttf",
     ]
+    candidates_italic = [
+        _os.path.join(windir, "Fonts", "ariali.ttf"),
+        _os.path.join(windir, "Fonts", "calibrii.ttf"),
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf",
+        "/usr/share/fonts/truetype/liberation2/LiberationSans-Italic.ttf",
+        "/Library/Fonts/Arial Italic.ttf",
+    ]
+    candidates_bold_italic = [
+        _os.path.join(windir, "Fonts", "arialbi.ttf"),
+        _os.path.join(windir, "Fonts", "calibriz.ttf"),
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-BoldOblique.ttf",
+        "/usr/share/fonts/truetype/liberation2/LiberationSans-BoldItalic.ttf",
+        "/Library/Fonts/Arial Bold Italic.ttf",
+    ]
 
     regular_path = _find_existing_file(candidates_regular)
     bold_path = _find_existing_file(candidates_bold)
+    italic_path = _find_existing_file(candidates_italic)
+    bold_italic_path = _find_existing_file(candidates_bold_italic)
     if regular_path:
         try:
             pdfmetrics.registerFont(TTFont("TenTagsUnicode", regular_path))
@@ -932,10 +948,20 @@ def _pdf_font_names() -> dict:
         try:
             pdfmetrics.registerFont(TTFont("TenTagsUnicode-Bold", bold_path))
             fonts["bold"] = "TenTagsUnicode-Bold"
-            fonts["bold_italic"] = "TenTagsUnicode-Bold"
         except Exception:
             fonts["bold"] = fonts["regular"]
-            fonts["bold_italic"] = fonts["regular"]
+    if italic_path and fonts["regular"] == "TenTagsUnicode":
+        try:
+            pdfmetrics.registerFont(TTFont("TenTagsUnicode-Italic", italic_path))
+            fonts["italic"] = "TenTagsUnicode-Italic"
+        except Exception:
+            fonts["italic"] = fonts["regular"]
+    if bold_italic_path and fonts["regular"] == "TenTagsUnicode":
+        try:
+            pdfmetrics.registerFont(TTFont("TenTagsUnicode-BoldItalic", bold_italic_path))
+            fonts["bold_italic"] = "TenTagsUnicode-BoldItalic"
+        except Exception:
+            fonts["bold_italic"] = fonts["bold"]
 
     _PDF_FONT_CACHE = fonts
     return fonts

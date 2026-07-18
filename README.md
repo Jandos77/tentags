@@ -12,9 +12,9 @@
 
 **TenTags** is a declarative template language and **Intermediate Representation (IR)** for **HTML**, **Excel (`.xlsx`)**, and **PDF** table and document generation.
 
-### 🚀 Current Release: 2.1.7
+### 🚀 Current Release: 2.1.8
 
-**TenTags 2.1.7** restores consistent `solid`, `dashed`, and `dotted` borders in PDF for outer-only, `-1` inner-grid, and `-0` borderless modes. All nine border variants are verified across HTML, XLSX, and PDF together with non-destructive `cm/rm` grouping.
+**TenTags 2.1.8** restores real Unicode italic and bold-italic PDF fonts for `<i>` and nested `<b><i>`. Every supported cell tag is now covered together across IR, HTML, XLSX, and PDF rendering.
 
 ## Install
 
@@ -543,7 +543,7 @@ tentags.render_pdf(model, "Enterprise_Budget_Matrix.pdf")
 ## 🛠️ API Reference
 
 ### Module Constants & Metadata
-- **`tentags.__version__`**: Library version string (e.g., `'2.1.7'`).
+- **`tentags.__version__`**: Library version string (e.g., `'2.1.8'`).
 - **`tentags.version_info`**: Version tuple for checking compatibility (e.g., `(2, 1, 7)`).
 - **`tentags.__author__`**: Author name (`'Zhandos Mambetali'`).
 - **`tentags.__license__`**: Project license (`'Apache-2.0'`).

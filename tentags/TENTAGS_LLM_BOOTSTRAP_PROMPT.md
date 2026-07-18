@@ -65,7 +65,7 @@ Public API stability:
 - Preserve old behavior unless the user explicitly asks for a breaking change.
 
 Current version:
-TenTags is currently 2.1.7. Do not change version metadata unless explicitly asked.
+TenTags is currently 2.1.8. Do not change version metadata unless explicitly asked.
 
 Bundled prompt API:
 - The installed library exposes this bootstrap prompt through `tentags.get_prompt()`.
@@ -987,6 +987,7 @@ Self-check before answering:
 - If vertical scale is greater than 1, verify that cell_height is greater than 0.
 - For MultiTable, verify each table item's scale addresses against that item's own rows and columns.
 - If border/grid/cm/rm rendering changed, complete the full nine-case border regression matrix in HTML, XLSX, and PDF before reporting success.
+- If parsing, styling, fonts, or renderer behavior changed, verify every supported cell tag across IR, HTML, XLSX, and PDF: <b>, <i>, nested <b><i>, <u>, <s>, <color>, <bg>, <fs>, <left>, <center>, <right>, <url>, <mark>, <value>, <img>, <cm>, and <rm>. Do not treat successful file creation as proof that a visual tag works; assert the resulting renderer properties.
 - Do not generate unsupported current syntax such as external <value=Table!List!A1>.
 - Do not invent new tags, new public APIs, or renderer-specific IR fields unless explicitly requested.
 - Prefer runnable examples over conceptual examples. If showing future syntax, label it clearly as future/reserved.

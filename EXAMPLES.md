@@ -1117,7 +1117,7 @@ style    = '''style(
 
 entries = [
     ('<url=https://github.com/tentags>GitHub Repository</url>', 'Open Source', '<color=green>Active</color>'),
-    ('<url=https://pypi.org/project/tentags>PyPI Package</url>', 'v2.1.7',     '<u>Stable</u>'),
+    ('<url=https://pypi.org/project/tentags>PyPI Package</url>', 'v2.1.8',     '<u>Stable</u>'),
     ('<url=https://tentags.readthedocs.io>Documentation</url>',  'Read the Docs', '<color=blue>Online</color>'),
 ]
 rows = '; '.join(f'{link}, {badge}, {status}' for link, badge, status in entries)
