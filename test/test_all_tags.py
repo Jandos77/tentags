@@ -97,8 +97,8 @@ def test_all_tags_render_to_html_xlsx_and_pdf():
     assert sheet["C1"].font.bold is True and sheet["C1"].font.italic is True
     assert sheet["D1"].font.underline == "single"
     assert sheet["A2"].font.strike is True
-    assert sheet["B2"].font.color.rgb.lower().endswith("ff0000")
-    assert sheet["C2"].fill.start_color.rgb.lower().endswith("ffff00")
+    assert sheet["B2"].font.color.rgb.lower() == "ffff0000"
+    assert sheet["C2"].fill.start_color.rgb.lower() == "ffffff00"
     assert sheet["D2"].font.sz == 18
     assert [sheet.cell(3, col).alignment.horizontal for col in range(1, 4)] == ["left", "center", "right"]
     assert sheet["D3"].hyperlink.target == "https://example.com"
@@ -115,6 +115,38 @@ def test_all_tags_render_to_html_xlsx_and_pdf():
     assert pdf_table._cellvalues[0][2].style.fontName == pdf_fonts["bold_italic"]
     assert pdf_output.read_bytes().startswith(b"%PDF")
     assert pdf_output.stat().st_size > 1000
+
+
+def test_xlsx_colors_are_opaque_argb_for_named_and_hex_values():
+    openpyxl = pytest.importorskip("openpyxl")
+    reportlab_colors = pytest.importorskip("reportlab.lib.colors")
+    output = demo_output_path("opaque_text_colors.xlsx")
+    model = tentags.parse(
+        '1,2,1,"blue","solid-1",0,28,'
+        'style(<bg=blue><color=white><b></b></color></bg>,'
+        '<bg=#f8fafc><color=#1977ff><i></i></color></bg>),'
+        'data(Named colors,Hex colors)'
+    )
+
+    assert model.cells[0][0].styles["color"] == "white"
+    assert model.cells[0][1].styles["color"] == "#1977ff"
+
+    html = tentags.render_html(model)
+    assert "color:white;" in html
+    assert "color:#1977ff;" in html
+
+    tentags.render_xlsx(model, output)
+    sheet = openpyxl.load_workbook(output)["Table"]
+
+    assert sheet["A1"].font.color.rgb.lower() == "ffffffff"
+    assert sheet["A1"].fill.start_color.rgb.lower() == "ff0000ff"
+    assert sheet["B1"].font.color.rgb.lower() == "ff1977ff"
+    assert sheet["B1"].fill.start_color.rgb.lower() == "fff8fafc"
+    assert sheet["A1"].border.left.color.rgb.lower() == "ff0000ff"
+
+    pdf_table = tentags._create_pdf_table_object(model)
+    assert pdf_table._cellvalues[0][0].style.textColor == reportlab_colors.white
+    assert pdf_table._cellvalues[0][1].style.textColor == reportlab_colors.HexColor("#1977ff")
 
 
 if __name__ == "__main__":

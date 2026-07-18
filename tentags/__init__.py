@@ -62,17 +62,17 @@ Website: https://tentags.org
 Documentation: https://tentags.org/docs
 GitHub: https://github.com/Jandos77/tentags
 
-Current Version: 2.1.8
+Current Version: 2.1.9
 License: Apache License 2.0
 """
 
-__version__ = "2.1.8"
+__version__ = "2.1.9"
 __author__ = "Zhandos Mambetali"
 __license__ = "Apache-2.0"
 __copyright__ = "Copyright (c) 2026 Zhandos Mambetali"
 __homepage__ = "https://tentags.org"
 __url__ = "https://tentags.org"
-version_info = (2, 1, 8)
+version_info = (2, 1, 9)
 
 __all__ = [
     "__version__",
@@ -1868,15 +1868,17 @@ def _normalize_color_to_hex(color_str: str) -> str:
     }
     
     if color_str in color_map:
-        return color_map[color_str]
+        return 'ff' + color_map[color_str]
         
     hex_val = color_str.replace('#', '')
     if len(hex_val) == 3:
-        return "".join(c * 2 for c in hex_val)
-    elif len(hex_val) in (6, 8):
+        return 'ff' + "".join(c * 2 for c in hex_val)
+    elif len(hex_val) == 6:
+        return 'ff' + hex_val
+    elif len(hex_val) == 8:
         return hex_val
         
-    return '000000'
+    return 'ff000000'
 
 def _write_model_to_sheet(
     model: TableModel,
