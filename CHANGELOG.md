@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+---
+
+## [2.1.5] - 2026-07-18
+
+### Added
+- Added the optional preamble extension `scale(A1=vertical,horizontal;...)` for renderer-independent relative row and column sizing.
+- Added strict `1..5` scale validation, local A1 bounds checking, and deterministic per-axis `max()` merging.
+- Added sparse `row_scales` and `col_scales` fields to `TableModel` without changing existing constructor calls.
+- Added `scale=` support to `tentags.serialize.preamble()` and `dumps_preamble()`.
+- Added HTML, XLSX, PDF, and MultiTable scale rendering with regression coverage.
+
+### Fixed
+- Unified PDF named-color conversion with XLSX color normalization so values such as `blue`, `white`, and `yellow` render consistently.
+
+---
+
 ## [2.1.4] - 2026-07-17
 
 ### Fixed
@@ -87,14 +105,14 @@ Serializer API, Addressing Model, and Multitable Layout.
   `_Union[str, _Any]`. Fixed to be consistent with all other type annotations in the file.
 
 > **Removed from PyPI** due to a defect discovered after publication.
-> Use the latest stable **2.1.4** release instead.
+> Use the latest stable **2.1.5** release instead.
 
 ---
 
 ## [2.0.0] - yanked
 
 > **Removed from PyPI** due to `NameError: Union is not defined` on Python 3.13+ at import.  
-> Use the latest stable **2.1.4** release instead.
+> Use the latest stable **2.1.5** release instead.
 
 ### Added (carried into 2.0.2 and later)
 - `<u>` tag — underline text (HTML inline CSS, XLSX `Font(underline="single")`, PDF `UNDERLINE`)
@@ -115,7 +133,7 @@ Serializer API, Addressing Model, and Multitable Layout.
 ## [1.1.4] - yanked
 
 > **Removed from PyPI** — contained the same `NameError: Union is not defined` bug on Python 3.13+.
-> Use the latest stable **2.1.4** release instead.
+> Use the latest stable **2.1.5** release instead.
 
 ---
 

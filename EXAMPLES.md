@@ -22,7 +22,7 @@ A complete guide to TenTags: all tags, template engine integrations, and passing
 Every TenTags formula has three parts:
 
 ```
-ROWS, COLS, BORDER_WIDTH, "BORDER_COLOR", "BORDER_STYLE", STRETCH, CELL_HEIGHT, data(...)
+ROWS, COLS, BORDER_WIDTH, "BORDER_COLOR", "BORDER_STYLE", STRETCH, CELL_HEIGHT [, scale(...)], data(...)
 ```
 
 | Parameter | Type | Description |
@@ -34,6 +34,7 @@ ROWS, COLS, BORDER_WIDTH, "BORDER_COLOR", "BORDER_STYLE", STRETCH, CELL_HEIGHT, 
 | `BORDER_STYLE` | string | Border style (`"solid"`, `"solid-1"`, `"solid-0"`) |
 | `STRETCH` | int | `0` = fixed height, `1` = auto-stretch |
 | `CELL_HEIGHT` | int | Cell height in px |
+| `scale(...)` | extension | Optional relative row and column scale for this table |
 | `data(...)` | block | Cell contents |
 
 **Separators inside `data()`:**
@@ -44,6 +45,107 @@ ROWS, COLS, BORDER_WIDTH, "BORDER_COLOR", "BORDER_STYLE", STRETCH, CELL_HEIGHT, 
 import tentags
 
 html = tentags.render('2, 3, 1, "black", "solid", 0, 40, data(A, B, C; D, E, F)')
+```
+
+### Relative row and column scale
+
+`scale(...)` is an optional part of the preamble. It changes logical grid proportions without introducing renderer-specific pixels, Excel objects, or PDF coordinates.
+
+```python
+from pathlib import Path
+import tentags
+
+output_dir = Path("demo_output")
+output_dir.mkdir(exist_ok=True)
+
+preamble = (
+    '5,4,1,"#64748b","solid-1",0,28,'
+    'scale(A1=2,3;C5=2,2;D3=3,5)'
+)
+
+style = """style(
+<center><bg=blue><color=white><b>, , , </b></color></bg>;
+<bg=white>, , , </bg>;
+<bg=#f8fafc>, , , </bg>;
+<bg=white>, , , </bg>;
+<bg=yellow>, , , </bg></center>
+)"""
+
+data = """data(
+Column A x3, Column B x1, Column C x2, Column D x5;
+Row 2 x1, Standard, Standard, Standard;
+Row 3 x3, Tall, Tall, Tall;
+Row 4 x1, Standard, Standard, Standard;
+Row 5 x2, Medium, Medium, Medium
+)"""
+
+model = tentags.compile(preamble, style, data)
+
+(output_dir / "scale_demo.html").write_text(
+    tentags.render_html(model),
+    encoding="utf-8",
+)
+tentags.render_xlsx(model, output_dir / "scale_demo.xlsx")
+tentags.render_pdf(model, output_dir / "scale_demo.pdf")
+```
+
+In this example:
+
+- `A1=2,3` makes row 1 twice as high and column A three times as wide as their standard sizes.
+- `C5=2,2` makes row 5 twice as high and column C twice as wide.
+- `D3=3,5` makes row 3 three times as high and column D five times as wide.
+- The address identifies a complete row and column; it does not assign a private size to one cell.
+
+Rules:
+
+- Vertical and horizontal values must be integers from `1` to `5`.
+- `1` means the standard size.
+- Repeated rows and columns use the maximum value for their own axis.
+- The address must be a local A1 cell inside the current table.
+- Ranges, marks, and `Table!List!A1` addresses are invalid inside `scale(...)`.
+- A vertical value greater than `1` requires `CELL_HEIGHT` greater than `0`.
+- Each MultiTable item may use its own `scale(...)` in its own preamble.
+
+The Serializer API produces the same canonical DSL without creating a second compiler path:
+
+```python
+preamble = tentags.serialize.preamble(
+    5,
+    4,
+    border_color="#64748b",
+    border_style="solid-1",
+    cell_height=28,
+    scale={
+        "A1": (2, 3),
+        "C5": (2, 2),
+        "D3": (3, 5),
+    },
+)
+
+model = tentags.compile(preamble, style, data)
+```
+
+For MultiTable, put `scale(...)` in each table item's own preamble. Different tables can therefore use different row and column proportions:
+
+```python
+tables = [
+    {
+        "document": "Report",
+        "table_name": "Summary",
+        "sheet_name": "Summary",
+        "preamble": '2,3,1,"black","solid-1",0,28,scale(A1=2,3)',
+        "style": "style(<bg=blue><color=white><b>, , </b></color></bg>; , , )",
+        "data": "data(Name,Value,Status;Revenue,125000,Closed)",
+    },
+    {
+        "document": "Report",
+        "table_name": "Details",
+        "sheet_name": "Details",
+        "preamble": '3,2,1,"black","solid-1",0,24,scale(B1=1,4;A3=2,1)',
+        "style": "style(,; ,; ,)",
+        "data": "data(Item,Description;A,Standard;B,Extended details)",
+    },
+]
 ```
 
 ---
@@ -1013,7 +1115,7 @@ style    = '''style(
 
 entries = [
     ('<url=https://github.com/tentags>GitHub Repository</url>', 'Open Source', '<color=green>Active</color>'),
-    ('<url=https://pypi.org/project/tentags>PyPI Package</url>', 'v2.1.4',     '<u>Stable</u>'),
+    ('<url=https://pypi.org/project/tentags>PyPI Package</url>', 'v2.1.5',     '<u>Stable</u>'),
     ('<url=https://tentags.readthedocs.io>Documentation</url>',  'Read the Docs', '<color=blue>Online</color>'),
 ]
 rows = '; '.join(f'{link}, {badge}, {status}' for link, badge, status in entries)

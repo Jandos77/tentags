@@ -15,6 +15,7 @@ If you remember only this, remember these rules:
 - Serializer API creates DSL strings only; it does not bypass the compiler.
 - Multitable means several separate table dictionaries, each with its own preamble, style, data, title, and sheet_name.
 - For every table item, preamble rows/cols must match style rows/cols and data rows/cols.
+- `scale(...)` is an optional part of each table's preamble; it is not a tag or renderer setting.
 - Canonical address syntax is PyCells-compatible Table!List!A1, Table!List!A1:B3, or Table!List!Summary.
 - Use <mark=Name> as a single cell tag and <url=goto:...> for navigation.
 - Save generated demo/test artifacts under <PROJECT_ROOT>/demo_output.
@@ -64,7 +65,7 @@ Public API stability:
 - Preserve old behavior unless the user explicitly asks for a breaking change.
 
 Current version:
-TenTags is currently 2.1.4. Do not change version metadata unless explicitly asked.
+TenTags is currently 2.1.5. Do not change version metadata unless explicitly asked.
 
 Bundled prompt API:
 - The installed library exposes this bootstrap prompt through `tentags.get_prompt()`.
@@ -86,7 +87,7 @@ A new tag may be added only if all three conditions are true:
 This rule protects TenTags from turning into a catch-all language. Prefer preserving the compact DSL over adding convenience tags.
 
 Main model:
-- TableModel: rows, cols, cells, border_width, border_color, border_style, stretch, cell_height.
+- TableModel: rows, cols, cells, border_width, border_color, border_style, stretch, cell_height, row_scales, col_scales.
 - CellDesc: raw_expr, text_parts, images, link, mark, value_refs, styles, merge/border flags.
 - mark is cell metadata.
 - link/navigation is behavior, not presentation style.
@@ -95,11 +96,61 @@ Main model:
 Basic TenTags syntax:
 Formula:
 
-rows, cols, border_width, border_color, border_style, stretch, cell_height, data(...)
+rows, cols, border_width, border_color, border_style, stretch, cell_height [, scale(...)], data(...)
 
 Example:
 
 3,2,1,"#000","solid-1",0,30, data(A,B; C,D; E,F)
+
+Optional preamble scale:
+
+3,2,1,"#000","solid-1",0,30,scale(A1=2,3;B3=1,2),data(A,B;C,D;E,F)
+
+Scale rules:
+- Syntax is scale(A1=vertical,horizontal;C5=vertical,horizontal).
+- scale(...) is an optional preamble extension. It is not a TenTags cell tag and must never appear inside style(...) or data(...).
+- Scale belongs to the current table preamble, not to an individual cell and not to export settings.
+- A1=2,3 applies vertical scale 2 to row 1 and horizontal scale 3 to column A.
+- The A1 address selects axes: its row receives the vertical value and its column receives the horizontal value. Individual cell dimensions do not exist.
+- Both values must be integers from 1 to 5. Never generate 0, 6, negative, decimal, or text values.
+- Value 1 means the renderer's standard row height or column width. Values 2 through 5 are relative multipliers of that standard size.
+- Addresses must be local A1 cells inside the current table. Do not use ranges, marks, or Table!List!A1 inside scale(...).
+- Repeated rows and columns use max() independently for vertical and horizontal values.
+- A vertical value greater than 1 requires cell_height greater than 0.
+- Every MultiTable item may have its own independent scale(...) in its own preamble.
+- Use tentags.serialize.preamble(..., scale={"A1": (2, 3)}) for generated Python data.
+- HTML maps horizontal values to relative colgroup widths and vertical values to row sizing.
+- XLSX maps them to worksheet column widths and row heights.
+- PDF maps them to ReportLab table column widths and row heights.
+- With stretch=0, vertical scale multiplies the fixed cell_height. With stretch=1, scaled height is a minimum/preferred height and content may expand it.
+- In XLSX stacked MultiTable mode, tables share physical worksheet columns; the renderer uses the maximum requested horizontal scale for each shared worksheet column.
+
+Canonical scale example:
+
+preamble = (
+    '5,4,1,"#64748b","solid-1",0,28,'
+    'scale(A1=2,3;C5=2,2;D3=3,5)'
+)
+
+Interpret it as:
+- row 1 = x2 and column A = x3
+- row 5 = x2 and column C = x2
+- row 3 = x3 and column D = x5
+
+Canonical Serializer equivalent:
+
+preamble = tentags.serialize.preamble(
+    5,
+    4,
+    border_color="#64748b",
+    border_style="solid-1",
+    cell_height=28,
+    scale={"A1": (2, 3), "C5": (2, 2), "D3": (3, 5)},
+)
+
+Always pass the resulting string through the one canonical compiler:
+
+model = tentags.compile(preamble, style, data)
 
 Separated style and data:
 
@@ -905,6 +956,10 @@ Self-check before answering:
 - All paired tags are properly opened and closed.
 - Single tags such as <mark>, <img>, and <value> are not closed.
 - Address syntax is canonical PyCells-compatible Table!List!A1, Table!List!A1:B3, or Table!List!Summary.
+- If scale(...) is present, every scale address is local, inside the current table, and both values are integers from 1 to 5.
+- If scale(...) is present, verify that it is in the preamble before style(...) or data(...), never inside a cell.
+- If vertical scale is greater than 1, verify that cell_height is greater than 0.
+- For MultiTable, verify each table item's scale addresses against that item's own rows and columns.
 - Do not generate unsupported current syntax such as external <value=Table!List!A1>.
 - Do not invent new tags, new public APIs, or renderer-specific IR fields unless explicitly requested.
 - Prefer runnable examples over conceptual examples. If showing future syntax, label it clearly as future/reserved.

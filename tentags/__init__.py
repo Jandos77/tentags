@@ -62,17 +62,17 @@ Website: https://tentags.org
 Documentation: https://tentags.org/docs
 GitHub: https://github.com/Jandos77/tentags
 
-Current Version: 2.1.4
+Current Version: 2.1.5
 License: Apache License 2.0
 """
 
-__version__ = "2.1.4"
+__version__ = "2.1.5"
 __author__ = "Zhandos Mambetali"
 __license__ = "Apache-2.0"
 __copyright__ = "Copyright (c) 2026 Zhandos Mambetali"
 __homepage__ = "https://tentags.org"
 __url__ = "https://tentags.org"
-version_info = (2, 1, 4)
+version_info = (2, 1, 5)
 
 __all__ = [
     "__version__",
@@ -110,7 +110,8 @@ __all__ = [
     "ResolvedAddress",
     "TableModel",
     "CellDesc",
-    "BorderFlags"
+    "BorderFlags",
+    "ScaleError"
 ]
 
 import re as _re
@@ -127,11 +128,16 @@ from tentags.addressing import AddressContext
 from tentags.addressing import AddressResolver
 from tentags.addressing import AddressTarget
 from tentags.addressing import column_to_name as _column_to_name
+from tentags.addressing import parse_cell_ref as _parse_cell_ref
 from tentags.addressing import DuplicateMarkError as _DuplicateMarkError
 from tentags.addressing import parse_address as _parse_address
 from tentags.addressing import ResolvedAddress
 
 _SENTINEL = object()
+
+class ScaleError(ValueError):
+    """Raised when a preamble scale(...) extension is invalid."""
+
 
 DEFAULT_MULTITABLE_HTML_SETTINGS = {
     "output": None,
@@ -184,6 +190,85 @@ def _require_positive_int(value: _Any, name: str) -> int:
         raise ValueError(f"{name} must be a positive integer.")
     return value
 
+def _parse_scale_block(scale_block: str, rows: int, cols: int) -> tuple[dict[int, int], dict[int, int]]:
+    match = _re.fullmatch(r"(?is)scale\((.*)\)", str(scale_block).strip())
+    if not match:
+        raise ScaleError("Invalid scale syntax. Expected scale(A1=1,3;C5=2,2).")
+
+    body = match.group(1).strip()
+    if not body:
+        raise ScaleError("scale(...) requires at least one A1=vertical,horizontal entry.")
+
+    entries = [entry.strip() for entry in body.split(";")]
+    if entries and entries[-1] == "":
+        entries.pop()
+    if not entries or any(not entry for entry in entries):
+        raise ScaleError("scale(...) contains an empty entry.")
+
+    row_scales = {}
+    col_scales = {}
+    entry_pattern = _re.compile(r"^([A-Za-z]+[1-9][0-9]*)\s*=\s*([1-5])\s*,\s*([1-5])$")
+
+    for entry in entries:
+        entry_match = entry_pattern.fullmatch(entry)
+        if not entry_match:
+            raise ScaleError(
+                f"Invalid scale entry {entry!r}. Expected A1=v,h with integer values from 1 to 5."
+            )
+
+        address_text, vertical_text, horizontal_text = entry_match.groups()
+        try:
+            cell = _parse_cell_ref(address_text)
+        except ValueError as exc:
+            raise ScaleError(f"Invalid scale cell address {address_text!r}.") from exc
+
+        if cell.row >= rows or cell.col >= cols:
+            raise ScaleError(
+                f"Scale address {address_text.upper()} is outside the {rows}x{cols} table."
+            )
+
+        vertical = int(vertical_text)
+        horizontal = int(horizontal_text)
+        if vertical > 1:
+            row_scales[cell.row] = max(row_scales.get(cell.row, 1), vertical)
+        if horizontal > 1:
+            col_scales[cell.col] = max(col_scales.get(cell.col, 1), horizontal)
+
+    return row_scales, col_scales
+
+def _serialize_scale_mapping(scale: _Any, rows: int, cols: int) -> str:
+    if scale is None:
+        return ""
+    if not isinstance(scale, dict):
+        raise ScaleError("scale must be a dict such as {'A1': (1, 3)}.")
+    if not scale:
+        return ""
+
+    normalized = {}
+    for address_text, values in scale.items():
+        try:
+            cell = _parse_cell_ref(str(address_text))
+        except ValueError as exc:
+            raise ScaleError(f"Invalid scale cell address {address_text!r}.") from exc
+        if cell.row >= rows or cell.col >= cols:
+            canonical = f"{_column_to_name(cell.col)}{cell.row + 1}"
+            raise ScaleError(f"Scale address {canonical} is outside the {rows}x{cols} table.")
+        if not isinstance(values, (tuple, list)) or len(values) != 2:
+            raise ScaleError(f"Scale value for {address_text!r} must be a pair (vertical, horizontal).")
+        vertical, horizontal = values
+        if any(isinstance(value, bool) or not isinstance(value, int) or value < 1 or value > 5 for value in values):
+            raise ScaleError(f"Scale value for {address_text!r} must contain integers from 1 to 5.")
+
+        key = (cell.row, cell.col)
+        previous = normalized.get(key, (1, 1))
+        normalized[key] = (max(previous[0], vertical), max(previous[1], horizontal))
+
+    entries = [
+        f"{_column_to_name(col)}{row + 1}={vertical},{horizontal}"
+        for (row, col), (vertical, horizontal) in sorted(normalized.items())
+    ]
+    return f"scale({';'.join(entries)})"
+
 def dumps_preamble(
     rows: int,
     cols: int,
@@ -192,6 +277,7 @@ def dumps_preamble(
     border_style: str = "solid",
     stretch: int = 0,
     cell_height: int = 30,
+    scale: _Any = None,
 ) -> str:
     """
     Serializes Python preamble values into canonical TenTags preamble text.
@@ -203,17 +289,19 @@ def dumps_preamble(
     border_width = _require_non_negative_int(border_width, "border_width")
     stretch = _require_non_negative_int(stretch, "stretch")
     cell_height = _require_non_negative_int(cell_height, "cell_height")
-    return ",".join(
-        [
-            str(rows),
-            str(cols),
-            str(border_width),
-            _dumps_quoted(border_color),
-            _dumps_quoted(border_style),
-            str(stretch),
-            str(cell_height),
-        ]
-    )
+    parts = [
+        str(rows),
+        str(cols),
+        str(border_width),
+        _dumps_quoted(border_color),
+        _dumps_quoted(border_style),
+        str(stretch),
+        str(cell_height),
+    ]
+    scale_block = _serialize_scale_mapping(scale, rows, cols)
+    if scale_block:
+        parts.append(scale_block)
+    return ",".join(parts)
 
 def _coerce_serializer_matrix(rows: _Any, name: str) -> list[list[_Any]]:
     if rows is None or isinstance(rows, (str, bytes)):
@@ -291,6 +379,7 @@ class _SerializeNamespace:
         border_style: str = "solid",
         stretch: int = 0,
         cell_height: int = 30,
+        scale: _Any = None,
     ) -> str:
         return dumps_preamble(
             rows=rows,
@@ -300,6 +389,7 @@ class _SerializeNamespace:
             border_style=border_style,
             stretch=stretch,
             cell_height=cell_height,
+            scale=scale,
         )
 
     @staticmethod
@@ -557,7 +647,19 @@ def _resolve_value_refs(model: "TableModel") -> "TableModel":
     return model
 
 class TableModel:
-    def __init__(self, rows: int, cols: int, cells: list[list[CellDesc]], border_width: int, border_color: str, border_style: str, stretch: int, cell_height: int):
+    def __init__(
+        self,
+        rows: int,
+        cols: int,
+        cells: list[list[CellDesc]],
+        border_width: int,
+        border_color: str,
+        border_style: str,
+        stretch: int,
+        cell_height: int,
+        row_scales: dict[int, int] = None,
+        col_scales: dict[int, int] = None,
+    ):
         self.rows = rows
         self.cols = cols
         self.cells = cells
@@ -566,6 +668,8 @@ class TableModel:
         self.border_style = border_style
         self.stretch = stretch
         self.cell_height = cell_height
+        self.row_scales = dict(row_scales or {})
+        self.col_scales = dict(col_scales or {})
 
 def _table_item_pycells_table_name(item: _Any) -> str:
     if not isinstance(item, dict):
@@ -1425,6 +1529,44 @@ def _parse_args_string(arg_str: str):
 
     return parts
 
+def _extract_preamble_scale(
+    args: list[str],
+    rows: int,
+    cols: int,
+) -> tuple[list[str], dict[int, int], dict[int, int]]:
+    scale_indexes = [
+        index
+        for index, value in enumerate(args)
+        if str(value).strip().lower().startswith("scale(")
+    ]
+    if not scale_indexes:
+        return args, {}, {}
+    if len(scale_indexes) > 1:
+        raise ScaleError("Preamble may contain only one scale(...) extension.")
+
+    scale_index = scale_indexes[0]
+    if scale_index < 6:
+        raise ScaleError("scale(...) must follow the six required preamble arguments.")
+
+    first_content_index = next(
+        (
+            index
+            for index, value in enumerate(args)
+            if str(value).strip().lower().startswith(("style(", "data("))
+        ),
+        None,
+    )
+    if first_content_index is not None and scale_index > first_content_index:
+        raise ScaleError("scale(...) belongs to the preamble and must appear before style(...) and data(...).")
+
+    row_scales, col_scales = _parse_scale_block(args[scale_index], rows, cols)
+    remaining = args[:scale_index] + args[scale_index + 1:]
+    return remaining, row_scales, col_scales
+
+def _validate_vertical_scale_base(row_scales: dict[int, int], cell_height: int) -> None:
+    if row_scales and cell_height <= 0:
+        raise ScaleError("Vertical scale requires cell_height greater than 0.")
+
 def _overlay_style_and_data(style_grid: list[list[CellDesc]], data_grid: list[list[CellDesc]]) -> list[list[CellDesc]]:
     """
     Overlays a presentation style grid of cells onto a content data grid of cells.
@@ -1489,6 +1631,7 @@ def parse(formula_args: str, context: dict = None) -> TableModel:
     border_color = args[3].strip('"\'')
     border_style = args[4].strip('"\'')
     stretch = int(args[5])
+    args, row_scales, col_scales = _extract_preamble_scale(args, rows, cols)
 
     cell_height = 30
     style_block_str = None
@@ -1508,6 +1651,8 @@ def parse(formula_args: str, context: dict = None) -> TableModel:
         cell_height = int(rem[0])
         style_block_str = rem[1]
         data_block_str = rem[2]
+
+    _validate_vertical_scale_base(row_scales, cell_height)
 
     cells_grid = []
 
@@ -1539,7 +1684,9 @@ def parse(formula_args: str, context: dict = None) -> TableModel:
         border_color=border_color,
         border_style=border_style,
         stretch=stretch,
-        cell_height=cell_height
+        cell_height=cell_height,
+        row_scales=row_scales,
+        col_scales=col_scales,
     )
     return _resolve_value_refs(model)
 
@@ -1584,18 +1731,35 @@ def render_html(
 
     html = [f'<table style="{table_style}">']
 
-    default_row_height_style = ""
-    if model.stretch == 1:
-        if model.rows > 0 and not has_images:
-            default_row_height_style = f"height:{100.0 / model.rows}%;"
-    else:
-        default_row_height_style = f"height:{model.cell_height}px;"
+    if model.col_scales and model.cols > 0:
+        col_weights = [model.col_scales.get(col, 1) for col in range(model.cols)]
+        total_weight = sum(col_weights)
+        html.append("<colgroup>")
+        for weight in col_weights:
+            percentage = 100.0 * weight / total_weight
+            width_text = f"{percentage:.6f}".rstrip("0").rstrip(".")
+            html.append(f'<col style="width:{width_text}%">')
+        html.append("</colgroup>")
 
     td_border = f"border:{model.border_width}px {border_style} {model.border_color};" if apply_to_inner else ""
 
     for r in range(model.rows):
-        row_has_images = r < len(model.cells) and any(bool(cell.images) for cell in model.cells[r])
-        row_height_style = "" if model.stretch == 1 and row_has_images else default_row_height_style
+        row_scale = model.row_scales.get(r, 1)
+        scaled_cell_height = model.cell_height * row_scale
+        if model.stretch == 0:
+            row_height_style = f"height:{scaled_cell_height}px;"
+        elif not has_images:
+            if model.row_scales:
+                row_weight_total = sum(model.row_scales.get(row, 1) for row in range(model.rows))
+                percentage = 100.0 * row_scale / row_weight_total if row_weight_total else 0
+                height_text = f"{percentage:.6f}".rstrip("0").rstrip(".")
+                row_height_style = f"height:{height_text}%;"
+            else:
+                row_height_style = f"height:{100.0 / model.rows}%;" if model.rows else ""
+        elif row_scale > 1:
+            row_height_style = f"height:{scaled_cell_height}px;"
+        else:
+            row_height_style = ""
         html.append(f'<tr style="{row_height_style}">')
         for c in range(model.cols):
             val = ""
@@ -1643,9 +1807,9 @@ def render_html(
             td_style = f"{td_border}padding:0;{overrides_css}"
             
             if model.stretch == 0:
-                td_style += f"height:{model.cell_height}px;"
+                td_style += f"height:{scaled_cell_height}px;"
 
-            forced_img_height = model.cell_height if model.stretch == 0 and images else None
+            forced_img_height = scaled_cell_height if model.stretch == 0 and images else None
             content = val + "".join(
                 _render_img_html(img, forced_height=forced_img_height, expand_cell=model.stretch == 1)
                 for img in images
@@ -1696,6 +1860,7 @@ def _write_model_to_sheet(
     address_context: AddressTarget = None,
 ):
     from openpyxl.styles import Border, Side, Alignment, Font, PatternFill
+    from openpyxl.utils.units import DEFAULT_COLUMN_WIDTH
     mark_index = build_mark_index(model)
     current_target = address_context or _make_address_target(
         model,
@@ -1727,11 +1892,20 @@ def _write_model_to_sheet(
         
     excel_color = _normalize_color_to_hex(model.border_color)
     border_side = Side(style=excel_border_style, color=excel_color)
+
+    if model.col_scales:
+        default_column_width = ws.sheet_format.defaultColWidth or DEFAULT_COLUMN_WIDTH
+        for col, scale in model.col_scales.items():
+            column_name = _column_to_name(col)
+            desired_width = default_column_width * scale
+            current_width = ws.column_dimensions[column_name].width
+            ws.column_dimensions[column_name].width = max(current_width or 0, desired_width)
     
     # Write values, borders, alignments, and heights
     for r in range(model.rows):
-        if model.stretch == 0:
-            ws.row_dimensions[start_row + r].height = model.cell_height
+        row_scale = model.row_scales.get(r, 1)
+        if model.stretch == 0 or row_scale > 1:
+            ws.row_dimensions[start_row + r].height = model.cell_height * row_scale
             
         for c in range(model.cols):
             cell_ref = ws.cell(row=start_row + r, column=c + 1)
@@ -1940,6 +2114,7 @@ def _create_pdf_table_object(
     model: TableModel,
     address_resolver: AddressResolver = None,
     address_context: AddressTarget = None,
+    available_width: float = None,
 ):
     from reportlab.lib import colors
     from reportlab.platypus import Table, TableStyle, Paragraph
@@ -1948,15 +2123,13 @@ def _create_pdf_table_object(
     resolver = address_resolver or _local_address_resolver(current_target)
     pdf_fonts = _pdf_font_names()
 
-    # Convert border/background color to reportlab color
-    def hex_to_rl_color(hex_str: str, default=colors.black):
-        if not hex_str:
+    # Use the same named-color and HEX normalization as the XLSX renderer.
+    def to_rl_color(color_value: str, default=colors.black):
+        if not color_value:
             return default
-        hex_str = hex_str.strip().lstrip('#')
-        if len(hex_str) == 3:
-            hex_str = ''.join([c*2 for c in hex_str])
         try:
-            return colors.HexColor('#' + hex_str)
+            normalized = _normalize_color_to_hex(str(color_value))
+            return colors.HexColor('#' + normalized[-6:])
         except Exception:
             return default
 
@@ -1977,7 +2150,7 @@ def _create_pdf_table_object(
         border_style = border_style[:-2]
 
     border_w = max(0.5, float(model.border_width))
-    border_c = hex_to_rl_color(model.border_color)
+    border_c = to_rl_color(model.border_color)
     if apply_to_inner:
         table_styles.append(('GRID', (0, 0), (-1, -1), border_w, border_c))
     elif apply_to_outer:
@@ -2050,7 +2223,7 @@ def _create_pdf_table_object(
 
             # Background fill
             if 'background-color' in cell_styles:
-                bg_c = hex_to_rl_color(cell_styles['background-color'])
+                bg_c = to_rl_color(cell_styles['background-color'])
                 table_styles.append(('BACKGROUND', (c, r), (c, r), bg_c))
 
             # Alignment
@@ -2061,7 +2234,7 @@ def _create_pdf_table_object(
             # Typography formatting
             is_bold = cell_styles.get('font-weight') == 'bold'
             is_italic = cell_styles.get('font-style') == 'italic'
-            font_color = hex_to_rl_color(cell_styles.get('color', ''), default=colors.black)
+            font_color = to_rl_color(cell_styles.get('color', ''), default=colors.black)
             decorations_pdf = cell_styles.get('text-decoration', '').split()
             is_underline = 'underline' in decorations_pdf
             is_strike = 'line-through' in decorations_pdf
@@ -2128,11 +2301,34 @@ def _create_pdf_table_object(
                 row_data.append("")
         data_matrix.append(row_data)
 
-    row_heights = None
-    if model.stretch == 0 and model.cell_height > 0:
-        row_heights = [max(25, model.cell_height)] * model.rows
+    col_widths = None
+    if model.col_scales and available_width and model.cols > 0:
+        col_weights = [model.col_scales.get(col, 1) for col in range(model.cols)]
+        total_weight = sum(col_weights)
+        col_widths = [available_width * weight / total_weight for weight in col_weights]
 
-    return Table(data_matrix, rowHeights=row_heights, style=TableStyle(table_styles))
+    row_heights = None
+    min_row_heights = None
+    if model.stretch == 0 and model.cell_height > 0:
+        row_heights = [
+            max(25, model.cell_height * model.row_scales.get(row, 1))
+            for row in range(model.rows)
+        ]
+    elif model.row_scales and model.cell_height > 0:
+        min_row_heights = [
+            model.cell_height * model.row_scales.get(row, 1)
+            if model.row_scales.get(row, 1) > 1
+            else 0
+            for row in range(model.rows)
+        ]
+
+    return Table(
+        data_matrix,
+        colWidths=col_widths,
+        rowHeights=row_heights,
+        minRowHeights=min_row_heights,
+        style=TableStyle(table_styles),
+    )
 
 def render_pdf(
     model: TableModel,
@@ -2166,6 +2362,7 @@ def render_pdf(
         model,
         address_resolver=address_resolver,
         address_context=address_context,
+        available_width=doc.width,
     )
     doc.build([table])
 
@@ -2230,6 +2427,8 @@ def compile(preamble: _Any, style: _Any, data: _Any, context: dict = None) -> Ta
     border_style = "solid"
     stretch = 0
     cell_height = 30
+    row_scales = {}
+    col_scales = {}
 
     if preamble:
         if isinstance(preamble, str):
@@ -2237,12 +2436,14 @@ def compile(preamble: _Any, style: _Any, data: _Any, context: dict = None) -> Ta
             if len(p_args) >= 6:
                 rows = int(p_args[0])
                 cols = int(p_args[1])
+                p_args, row_scales, col_scales = _extract_preamble_scale(p_args, rows, cols)
                 border_width = int(p_args[2])
                 border_color = p_args[3].strip('"\'')
                 border_style = p_args[4].strip('"\'')
                 stretch = int(p_args[5])
                 if len(p_args) >= 7:
                     cell_height = int(p_args[6])
+                _validate_vertical_scale_base(row_scales, cell_height)
             elif len(p_args) >= 3:
                 border_width = int(p_args[0])
                 border_color = p_args[1].strip('"\'')
@@ -2259,6 +2460,10 @@ def compile(preamble: _Any, style: _Any, data: _Any, context: dict = None) -> Ta
             cell_height = preamble.get('cell_height', cell_height)
             rows = preamble.get('rows', rows)
             cols = preamble.get('cols', cols)
+            scale_block = _serialize_scale_mapping(preamble.get('scale'), rows, cols)
+            if scale_block:
+                row_scales, col_scales = _parse_scale_block(scale_block, rows, cols)
+            _validate_vertical_scale_base(row_scales, cell_height)
 
     model = TableModel(
         rows=rows,
@@ -2268,7 +2473,9 @@ def compile(preamble: _Any, style: _Any, data: _Any, context: dict = None) -> Ta
         border_color=border_color,
         border_style=border_style,
         stretch=stretch,
-        cell_height=cell_height
+        cell_height=cell_height,
+        row_scales=row_scales,
+        col_scales=col_scales,
     )
     return _resolve_value_refs(model)
 
@@ -2580,7 +2787,7 @@ def multitable_pdf(
 
     _validate_multitable_columns([(model, meta) for model, meta, _ in materialized], settings)
 
-    def table_block(model, meta, target, index):
+    def table_block(model, meta, target, index, available_width=None):
         block = []
         title = meta["title"]
         if title:
@@ -2597,6 +2804,7 @@ def multitable_pdf(
                 model,
                 address_resolver=resolver,
                 address_context=target,
+                available_width=available_width,
             )
         )
         return block
@@ -2652,7 +2860,7 @@ def multitable_pdf(
         return max(1, rows_that_fit) * tables_per_row
 
     story = []
-    blocks = [
+    preliminary_blocks = [
         table_block(model, meta, target, index)
         for index, (model, meta, target) in enumerate(materialized)
     ]
@@ -2661,9 +2869,14 @@ def multitable_pdf(
     gap_size = settings.get("gap") or 0
     tables_per_row = settings.get("tables_per_row") or 1
     if tables_per_row == "auto":
-        tables_per_row = auto_tables_per_row(blocks, content_width, gap_size)
+        tables_per_row = auto_tables_per_row(preliminary_blocks, content_width, gap_size)
     tables_per_page = settings.get("tables_per_page")
     col_width = (content_width - (tables_per_row - 1) * gap_size) / tables_per_row
+    table_width = col_width if tables_per_row == 1 else max(1, col_width - gap_size)
+    blocks = [
+        table_block(model, meta, target, index, available_width=table_width)
+        for index, (model, meta, target) in enumerate(materialized)
+    ]
     if tables_per_page == "auto":
         tables_per_page = auto_tables_per_page(
             blocks,

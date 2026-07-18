@@ -12,9 +12,9 @@
 
 **TenTags** is a declarative template language and **Intermediate Representation (IR)** for **HTML**, **Excel (`.xlsx`)**, and **PDF** table and document generation.
 
-### 🚀 Current Release: 2.1.4
+### 🚀 Current Release: 2.1.5
 
-**TenTags 2.1.4** is a release that synchronizes package version configuration and demo environment requirements, preserving the core multiline style fixes, Serializer API, and Multitable Layout controls.
+**TenTags 2.1.5** adds renderer-independent `scale(...)` control for relative row heights and column widths, including HTML, XLSX, PDF, MultiTable, and Serializer API support.
 
 ## Install
 
@@ -76,7 +76,7 @@ The same compiled model can be rendered to HTML, XLSX, or PDF.
 The preamble is the first line of a TenTags table. It defines the shape and global grid settings.
 
 ```text
-rows, cols, border_width, "border_color", "border_style", stretch, cell_height
+rows, cols, border_width, "border_color", "border_style", stretch, cell_height [, scale(...)]
 ```
 
 Example:
@@ -94,8 +94,77 @@ Example:
 | 5 | `border_style` | `solid`, `dashed`, `dotted`; suffix `-1` enables inner grid borders, suffix `-0` hides borders. |
 | 6 | `stretch` | `0` keeps fixed row height, `1` allows cells to stretch. |
 | 7 | `cell_height` | Default row height in pixels. |
+| Extension | `scale(...)` | Optional relative row and column scaling for this table. |
 
 The first two arguments must match your table grid. For example, `3,3,...` means that `style(...)` and `data(...)` should each describe 3 rows and 3 columns.
+
+### Relative Grid Scale
+
+`scale(...)` is an optional named part of the preamble:
+
+```text
+5,4,1,"black","solid-1",0,28,scale(A1=1,3;C5=2,2)
+```
+
+Each entry has the form:
+
+```text
+CellAddress=VerticalScale,HorizontalScale
+```
+
+Although the syntax uses A1 cell addresses, scale belongs to the logical grid, not to an individual cell. `A1=1,3` applies vertical scale `1` to row 1 and horizontal scale `3` to column A.
+
+In other words, the cell address selects two grid axes:
+
+```text
+A1=2,3
+   | |
+   | +-- column A width = standard width x 3
+   +---- row 1 height   = standard height x 2
+```
+
+The dimensions apply to the complete row and column. TenTags does not create a private width or height for only cell `A1`.
+
+Only integer values from `1` to `5` are valid. `1` means the standard size. If several entries address the same row or column, TenTags takes the maximum value separately for each axis:
+
+```text
+scale(A1=1,2;A3=3,1;A5=2,5)
+
+Rows:    1=1, 3=3, 5=2
+Column:  A=max(2,1,5)=5
+```
+
+Addresses must point to cells inside the current table. Ranges, marks, and external addresses are not allowed. With `stretch=0`, vertical scale multiplies the fixed `cell_height`. With `stretch=1`, it is a minimum/preferred row height and content may expand the row. Horizontal scale is mapped to renderer-native relative column widths. A vertical value greater than `1` requires `cell_height` greater than `0`.
+
+Renderer behavior is consistent at the logical level:
+
+| Renderer | Horizontal scale | Vertical scale |
+| :--- | :--- | :--- |
+| HTML | Relative `<colgroup>` widths | Row height or minimum content height |
+| XLSX | Worksheet column widths | Worksheet row heights |
+| PDF | Relative ReportLab table widths | PDF table row heights |
+
+You can also generate the same preamble from Python structures:
+
+```python
+preamble = tentags.serialize.preamble(
+    5,
+    4,
+    border_color="black",
+    border_style="solid-1",
+    cell_height=28,
+    scale={
+        "A1": (1, 3),
+        "C5": (2, 2),
+    },
+)
+```
+
+This produces exactly:
+
+```text
+5,4,1,"black","solid-1",0,28,scale(A1=1,3;C5=2,2)
+```
 
 ---
 
@@ -133,7 +202,15 @@ TenTags tags are not limited to one cell. A tag remains active until its closing
 
 This is usually clearer and more compact than repeating the same complete tag in every cell.
 
-Colors can be simple names such as `blue`, `green`, `white`, and `yellow`, or exact HEX values such as `#1977ff` and `#f8fafc`.
+TenTags supports the following color names:
+
+```text
+black, white, red, green, blue, yellow,
+gray, grey, silver, maroon, purple, fuchsia,
+lime, olive, navy, teal, aqua, orange
+```
+
+Names are case-insensitive. `gray` and `grey` are aliases for the same color. Any other color can be written as an exact three- or six-digit HEX value, for example `#fff`, `#1977ff`, or `#f8fafc`.
 
 In `style(...)`, a cell may contain only tags and no text. That is normal:
 
@@ -448,8 +525,8 @@ tentags.render_pdf(model, "Enterprise_Budget_Matrix.pdf")
 ## 🛠️ API Reference
 
 ### Module Constants & Metadata
-- **`tentags.__version__`**: Library version string (e.g., `'2.1.4'`).
-- **`tentags.version_info`**: Version tuple for checking compatibility (e.g., `(2, 1, 4)`).
+- **`tentags.__version__`**: Library version string (e.g., `'2.1.5'`).
+- **`tentags.version_info`**: Version tuple for checking compatibility (e.g., `(2, 1, 5)`).
 - **`tentags.__author__`**: Author name (`'Zhandos Mambetali'`).
 - **`tentags.__license__`**: Project license (`'Apache-2.0'`).
 - **`tentags.__homepage__`**: Link to home website (`'https://tentags.org'`).
@@ -598,11 +675,31 @@ data = tentags.serialize.data(data_rows, expected_rows=len(data_rows), expected_
 model = tentags.compile(preamble, style, data)
 ```
 
-#### `tentags.serialize.preamble(rows, cols, border_width=1, border_color="#cbd5e1", border_style="solid", stretch=0, cell_height=30) -> str`
+#### `tentags.serialize.preamble(rows, cols, border_width=1, border_color="#cbd5e1", border_style="solid", stretch=0, cell_height=30, scale=None) -> str`
 Serializes Python preamble values into a TenTags preamble string such as:
 
 ```python
 '9,5,1,"#64748b","solid-1",0,28'
+```
+
+Relative grid sizes can be serialized from a mapping:
+
+```python
+preamble = tentags.serialize.preamble(
+    5,
+    4,
+    cell_height=28,
+    scale={
+        "A1": (1, 3),
+        "C5": (2, 2),
+    },
+)
+```
+
+This produces:
+
+```text
+5,4,1,"#cbd5e1","solid",0,28,scale(A1=1,3;C5=2,2)
 ```
 
 #### `tentags.serialize.style(rows, expected_rows=None, expected_cols=None) -> str`
@@ -625,6 +722,8 @@ Exports a `TableModel` directly to a vector **PDF** file using `ReportLab`. Tran
 ## 🗂️ Multi-Table Rendering
 
 TenTags supports assembling several independent logical Lists/Tables into one HTML, XLSX, or PDF export. A multitable report is not one large grid: each List has its own preamble, style, data, title, and optional XLSX sheet name.
+
+Because `scale(...)` belongs to the preamble, every MultiTable item may define its own independent row and column scales. Scale is not an HTML/PDF/XLSX export setting. In XLSX `mode="stacked"`, separate tables share physical worksheet columns, so each worksheet column uses the maximum horizontal scale requested by the tables on that sheet.
 
 Each table item uses PyCells-compatible logical naming:
 
