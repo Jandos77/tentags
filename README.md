@@ -22,6 +22,15 @@
 pip install tentags
 ```
 
+The original compact TenTags syntax can describe and render a complete table in one line:
+
+```python
+import tentags
+
+formula = '2,3,1,"#cbd5e1","solid-1",0,28,data(Product,Q1 Sales,Status;Laptops,<right>12000</right>,<center>Excellent</center>)'
+html = tentags.render(formula)
+```
+
 ---
 
 ## Start Here: The Three Blocks
