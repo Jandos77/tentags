@@ -22,8 +22,6 @@
 pip install tentags
 ```
 
-Optional XLSX and PDF backends are described later in the installation section.
-
 ---
 
 ## Start Here: The Three Blocks
@@ -44,9 +42,11 @@ import tentags
 preamble = '3,3,1,"#cbd5e1","solid-1",0,28'
 
 style = """style(
+<center>
 <bg=blue><color=white><b>, , </b></color></bg>;
 <bg=white>, </bg>, <bg=green></bg>;
 <bg=#f8fafc>, </bg>, <bg=yellow></bg>
+</center>
 )"""
 
 data = """data(
@@ -108,11 +108,21 @@ Example:
 
 ```python
 style = """style(
+<center>
 <bg=blue><color=white><b>, , </b></color></bg>;
 <bg=white>, </bg>, <bg=green></bg>;
 <bg=#f8fafc>, </bg>, <bg=yellow></bg>
+</center>
 )"""
 ```
+
+TenTags tags are not limited to one cell. A tag remains active until its closing tag:
+
+- `<center>` is opened once before the first row and closed after the last row, so it applies to the whole table.
+- `<bg=blue>`, `<color=white>`, and `<b>` are opened in the first cell and closed in the last cell of the first row, so they apply to that entire row.
+- `<bg=white>` and `<bg=#f8fafc>` span the first two cells of their rows; the last cell receives its own background.
+
+This is usually clearer and more compact than repeating the same complete tag in every cell.
 
 Colors can be simple names such as `blue`, `green`, `white`, and `yellow`, or exact HEX values such as `#1977ff` and `#f8fafc`.
 
@@ -223,9 +233,11 @@ import tentags
 preamble = '3,3,1,"#cbd5e1","solid-1",0,28'
 
 style = """style(
+<center>
 <bg=blue><color=white><b>, , </b></color></bg>;
 <bg=white>, </bg>, <bg=green></bg>;
 <bg=#f8fafc>, </bg>, <bg=yellow></bg>
+</center>
 )"""
 
 data = """data(
@@ -268,11 +280,7 @@ conn.executemany(
 records = conn.execute("SELECT product, q1, status FROM sales").fetchall()
 
 data_rows = [["Product", "Q1 Sales", "Status"]]
-style_lines = [
-    "<center><u><bg=blue><color=white><b></b></color></bg>, "
-    "<bg=blue><color=white><b></b></color></bg>, "
-    "<bg=blue><color=white><b></b></color></bg>"
-]
+style_rows = [["<bg=blue><color=white><b></b></color></bg>"] * 3]
 
 for product, q1, status in records:
     status_bg = "green" if status == "Excellent" else "yellow"
@@ -281,9 +289,11 @@ for product, q1, status in records:
         f"<right>{q1}</right>",
         f"<center>{status}</center>",
     ])
-    style_lines.append(f"<bg=white></bg>, <bg=white></bg>, <bg={status_bg}></bg>")
-
-style_lines[-1] += "</u></center>"
+    style_rows.append([
+        "<bg=white></bg>",
+        "<bg=white></bg>",
+        f"<bg={status_bg}></bg>",
+    ])
 
 preamble = tentags.serialize.preamble(
     len(data_rows),
@@ -292,7 +302,7 @@ preamble = tentags.serialize.preamble(
     border_style="solid-1",
     cell_height=28,
 )
-style = "style(\n" + ";\n".join(style_lines) + "\n)"
+style = tentags.serialize.style(style_rows, expected_rows=len(data_rows), expected_cols=3)
 data = tentags.serialize.data(data_rows, expected_rows=len(data_rows), expected_cols=3)
 
 model = tentags.compile(preamble, style, data)
@@ -328,6 +338,20 @@ A new TenTags tag may be added only if all three conditions are true:
 3. It cannot be expressed cleanly with existing TenTags primitives.
 
 This keeps TenTags compact, predictable, and renderer-independent.
+
+---
+
+## Dependencies
+
+The TenTags parser, compiler, DSL, and Intermediate Representation are implemented by TenTags itself. The core uses the Python Standard Library; established open-source libraries are used only as optional output backends.
+
+| Component | Purpose | License | Commercial use |
+|---|---|---|---|
+| Python Standard Library | Core implementation | PSF License | Yes |
+| openpyxl | Excel (`.xlsx`) rendering | MIT | Yes |
+| ReportLab Open Source Toolkit | PDF rendering | BSD | Yes |
+
+These permissive licenses can be used alongside the Apache-2.0 license of TenTags in open-source and commercial projects. TenTags provides the document model and rendering logic; openpyxl and ReportLab write the already compiled IR to their target file formats.
 
 ---
 
@@ -509,9 +533,11 @@ rows = [
 ]
 
 style = """style(
-<center><u><bg=blue><color=white><b></b></color></bg>, <bg=blue><color=white><b></b></color></bg>, <bg=blue><color=white><b></b></color></bg>;
-<bg=white></bg>, <bg=white></bg>, <bg=green></bg>;
-<bg=#f8fafc></bg>, <bg=#f8fafc></bg>, <bg=yellow></bg></u></center>
+<center><u>
+<bg=blue><color=white><b>, , </b></color></bg>;
+<bg=white>, </bg>, <bg=green></bg>;
+<bg=#f8fafc>, </bg>, <bg=yellow></bg>
+</u></center>
 )"""
 
 preamble = tentags.serialize.preamble(len(rows), 3, border_color="#64748b", border_style="solid-1", cell_height=28)
@@ -538,29 +564,27 @@ import tentags
 
 conn = sqlite3.connect("demo_output/finance.db")
 conn.row_factory = sqlite3.Row
-records = [dict(row) for row in conn.execute("SELECT period, revenue, status FROM monthly_report")]
+records = conn.execute("SELECT period, revenue, status FROM monthly_report").fetchall()
 conn.close()
 
 data_rows = [["Period", "<right>Revenue</right>", "<center>Status</center>"]]
-style_lines = [
-    "<center><u><bg=blue><color=white><b></b></color></bg>, "
-    "<bg=blue><color=white><b></b></color></bg>, "
-    "<bg=blue><color=white><b></b></color></bg>"
-]
+style_rows = [["<bg=blue><color=white><b></b></color></bg>"] * 3]
 
-for index, record in enumerate(records):
-    base_bg = "white" if index % 2 == 0 else "#f8fafc"
+for record in records:
+    status_bg = "green" if record["status"] == "Closed" else "yellow"
     data_rows.append([
         record["period"],
         f"<right>{record['revenue']}</right>",
         f"<center>{record['status']}</center>",
     ])
-    style_lines.append(f"<bg={base_bg}></bg>, <bg={base_bg}></bg>, <bg={base_bg}></bg>")
-
-style_lines[-1] += "</u></center>"
+    style_rows.append([
+        "<bg=white></bg>",
+        "<bg=white></bg>",
+        f"<bg={status_bg}></bg>",
+    ])
 
 preamble = tentags.serialize.preamble(len(data_rows), 3, border_color="#64748b", border_style="solid-1", cell_height=28)
-style = "style(\n" + ";\n".join(style_lines) + "\n)"
+style = tentags.serialize.style(style_rows, expected_rows=len(data_rows), expected_cols=3)
 data = tentags.serialize.data(data_rows, expected_rows=len(data_rows), expected_cols=3)
 model = tentags.compile(preamble, style, data)
 ```
