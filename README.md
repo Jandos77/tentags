@@ -44,9 +44,9 @@ import tentags
 preamble = '3,3,1,"#cbd5e1","solid-1",0,28'
 
 style = """style(
-<bg=blue><color=white><b></b></color></bg>, <bg=blue><color=white><b></b></color></bg>, <bg=blue><color=white><b></b></color></bg>;
-<bg=white></bg>, <bg=white></bg>, <bg=green></bg>;
-<bg=#f8fafc></bg>, <bg=#f8fafc></bg>, <bg=yellow></bg>
+<bg=blue><color=white><b>, , </b></color></bg>;
+<bg=white>, </bg>, <bg=green></bg>;
+<bg=#f8fafc>, </bg>, <bg=yellow></bg>
 )"""
 
 data = """data(
@@ -108,9 +108,9 @@ Example:
 
 ```python
 style = """style(
-<bg=blue><color=white><b></b></color></bg>, <bg=blue><color=white><b></b></color></bg>, <bg=blue><color=white><b></b></color></bg>;
-<bg=white></bg>, <bg=white></bg>, <bg=green></bg>;
-<bg=#f8fafc></bg>, <bg=#f8fafc></bg>, <bg=yellow></bg>
+<bg=blue><color=white><b>, , </b></color></bg>;
+<bg=white>, </bg>, <bg=green></bg>;
+<bg=#f8fafc>, </bg>, <bg=yellow></bg>
 )"""
 ```
 
@@ -223,9 +223,9 @@ import tentags
 preamble = '3,3,1,"#cbd5e1","solid-1",0,28'
 
 style = """style(
-<bg=blue><color=white><b></b></color></bg>, <bg=blue><color=white><b></b></color></bg>, <bg=blue><color=white><b></b></color></bg>;
-<bg=white></bg>, <bg=white></bg>, <bg=green></bg>;
-<bg=#f8fafc></bg>, <bg=#f8fafc></bg>, <bg=yellow></bg>
+<bg=blue><color=white><b>, , </b></color></bg>;
+<bg=white>, </bg>, <bg=green></bg>;
+<bg=#f8fafc>, </bg>, <bg=yellow></bg>
 )"""
 
 data = """data(
