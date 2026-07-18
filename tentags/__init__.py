@@ -62,17 +62,17 @@ Website: https://tentags.org
 Documentation: https://tentags.org/docs
 GitHub: https://github.com/Jandos77/tentags
 
-Current Version: 2.1.6
+Current Version: 2.1.7
 License: Apache License 2.0
 """
 
-__version__ = "2.1.6"
+__version__ = "2.1.7"
 __author__ = "Zhandos Mambetali"
 __license__ = "Apache-2.0"
 __copyright__ = "Copyright (c) 2026 Zhandos Mambetali"
 __homepage__ = "https://tentags.org"
 __url__ = "https://tentags.org"
-version_info = (2, 1, 6)
+version_info = (2, 1, 7)
 
 __all__ = [
     "__version__",
@@ -2114,8 +2114,17 @@ def _create_pdf_table_object(
 
     border_w = max(0.5, float(model.border_width))
     border_c = to_rl_color(model.border_color)
+    border_dash = None
+    if border_style == 'dashed':
+        border_dash = [4, 3]
+    elif border_style == 'dotted':
+        border_dash = [1, 2]
+
+    def pdf_line(command, start, end):
+        return (command, start, end, border_w, border_c, 1, border_dash)
+
     if apply_to_inner:
-        table_styles.append(('BOX', (0, 0), (-1, -1), border_w, border_c))
+        table_styles.append(pdf_line('BOX', (0, 0), (-1, -1)))
 
         for r in range(model.rows):
             for c in range(1, model.cols):
@@ -2126,7 +2135,7 @@ def _create_pdf_table_object(
                     or (right_cell is not None and right_cell.border_flags & BorderFlags.HIDE_LEFT)
                 )
                 if not hidden:
-                    table_styles.append(('LINEBEFORE', (c, r), (c, r), border_w, border_c))
+                    table_styles.append(pdf_line('LINEBEFORE', (c, r), (c, r)))
 
         for r in range(1, model.rows):
             for c in range(model.cols):
@@ -2137,9 +2146,9 @@ def _create_pdf_table_object(
                     or (bottom_cell is not None and bottom_cell.border_flags & BorderFlags.HIDE_TOP)
                 )
                 if not hidden:
-                    table_styles.append(('LINEABOVE', (c, r), (c, r), border_w, border_c))
+                    table_styles.append(pdf_line('LINEABOVE', (c, r), (c, r)))
     elif apply_to_outer:
-        table_styles.append(('BOX', (0, 0), (-1, -1), border_w, border_c))
+        table_styles.append(pdf_line('BOX', (0, 0), (-1, -1)))
         
     table_styles.append(('VALIGN', (0, 0), (-1, -1), 'MIDDLE'))
 

@@ -13,7 +13,7 @@ from demo_paths import demo_output_path
 
 
 SCALE_DEMO_PREAMBLE = (
-    '5,4,1,"#64748b","solid-1",0,28,'
+    '5,4,1,"#64748b","dashed-1",0,28,'
     'scale(A1=2,3;C5=2,2;D3=3,5)'
 )
 

@@ -8,6 +8,16 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.1.7] - 2026-07-18
+
+### Fixed
+- Restored PDF `solid`, `dashed`, and `dotted` border patterns, including `-1` inner-grid and `-0` borderless suffix behavior, after the non-destructive `cm/rm` line-segment renderer change.
+
+### Testing
+- Added the complete nine-case border matrix across HTML, XLSX, and PDF: `solid`, `solid-1`, `solid-0`, `dashed`, `dashed-1`, `dashed-0`, `dotted`, `dotted-1`, and `dotted-0`, including `cm/rm` interactions and visible MultiTable artifacts.
+
+---
+
 ## [2.1.6] - 2026-07-18
 
 ### Fixed
@@ -112,14 +122,14 @@ Serializer API, Addressing Model, and Multitable Layout.
   `_Union[str, _Any]`. Fixed to be consistent with all other type annotations in the file.
 
 > **Removed from PyPI** due to a defect discovered after publication.
-> Use the latest stable **2.1.6** release instead.
+> Use the latest stable **2.1.7** release instead.
 
 ---
 
 ## [2.0.0] - yanked
 
 > **Removed from PyPI** due to `NameError: Union is not defined` on Python 3.13+ at import.  
-> Use the latest stable **2.1.6** release instead.
+> Use the latest stable **2.1.7** release instead.
 
 ### Added (carried into 2.0.2 and later)
 - `<u>` tag — underline text (HTML inline CSS, XLSX `Font(underline="single")`, PDF `UNDERLINE`)
@@ -140,7 +150,7 @@ Serializer API, Addressing Model, and Multitable Layout.
 ## [1.1.4] - yanked
 
 > **Removed from PyPI** — contained the same `NameError: Union is not defined` bug on Python 3.13+.
-> Use the latest stable **2.1.6** release instead.
+> Use the latest stable **2.1.7** release instead.
 
 ---
 

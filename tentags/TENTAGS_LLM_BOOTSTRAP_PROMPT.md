@@ -65,7 +65,7 @@ Public API stability:
 - Preserve old behavior unless the user explicitly asks for a breaking change.
 
 Current version:
-TenTags is currently 2.1.6. Do not change version metadata unless explicitly asked.
+TenTags is currently 2.1.7. Do not change version metadata unless explicitly asked.
 
 Bundled prompt API:
 - The installed library exposes this bootstrap prompt through `tentags.get_prompt()`.
@@ -101,6 +101,27 @@ rows, cols, border_width, border_color, border_style, stretch, cell_height [, sc
 Example:
 
 3,2,1,"#000","solid-1",0,30, data(A,B; C,D; E,F)
+
+Border style rules:
+- The supported base border styles are solid, dashed, and dotted.
+- Suffix -1 enables both outer and inner grid lines, for example dashed-1.
+- Suffix -0 hides all borders, for example dotted-0.
+- Without a suffix, only the outer table border is rendered.
+- HTML, XLSX, and PDF must preserve both the base line pattern and the suffix behavior.
+- Selective cm/rm border hiding must not convert remaining dashed or dotted segments to solid lines.
+
+Mandatory border regression matrix:
+- Whenever border rendering, grid geometry, cm/rm, HTML, XLSX, or PDF rendering changes, test all nine combinations: solid, solid-1, solid-0, dashed, dashed-1, dashed-0, dotted, dotted-1, dotted-0.
+- Test every combination independently in HTML, XLSX, and PDF. Testing only one renderer or only representative combinations is insufficient.
+- For styles without a suffix, verify that only the outer table border exists.
+- For -1 styles, verify that both outer and inner grid lines exist.
+- For -0 styles, verify that no table or cell borders exist.
+- Verify that solid remains solid, dashed remains dashed, and dotted remains dotted on both outer and inner segments.
+- Combine every border variant with cm and rm using non-empty values in every participating cell.
+- Verify that cm hides only the intended internal vertical lines and rm hides only the intended internal horizontal lines.
+- Verify that all cell values, styles, links, marks, and logical addresses survive in every renderer.
+- XLSX must not create merged ranges for cm/rm. PDF must not create SPAN commands. HTML must not use colspan/rowspan for cm/rm.
+- For visible demo artifacts, include all nine variants rather than a partial sample.
 
 Optional preamble scale:
 
@@ -965,6 +986,7 @@ Self-check before answering:
 - If scale(...) is present, verify that it is in the preamble before style(...) or data(...), never inside a cell.
 - If vertical scale is greater than 1, verify that cell_height is greater than 0.
 - For MultiTable, verify each table item's scale addresses against that item's own rows and columns.
+- If border/grid/cm/rm rendering changed, complete the full nine-case border regression matrix in HTML, XLSX, and PDF before reporting success.
 - Do not generate unsupported current syntax such as external <value=Table!List!A1>.
 - Do not invent new tags, new public APIs, or renderer-specific IR fields unless explicitly requested.
 - Prefer runnable examples over conceptual examples. If showing future syntax, label it clearly as future/reserved.
