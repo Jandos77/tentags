@@ -354,13 +354,13 @@ This keeps TenTags compact, predictable, and renderer-independent.
 
 The TenTags parser, compiler, DSL, and Intermediate Representation are implemented by TenTags itself. The core uses the Python Standard Library; established open-source libraries are used only as optional output backends.
 
-| Component | Purpose | License | Commercial use |
-|---|---|---|---|
-| Python Standard Library | Core implementation | PSF License | Yes |
-| openpyxl | Excel (`.xlsx`) rendering | MIT | Yes |
-| ReportLab Open Source Toolkit | PDF rendering | BSD | Yes |
+| Component | Purpose |
+|---|---|
+| Python Standard Library | Core implementation |
+| openpyxl | Excel (`.xlsx`) rendering |
+| ReportLab Open Source Toolkit | PDF rendering |
 
-These permissive licenses can be used alongside the Apache-2.0 license of TenTags in open-source and commercial projects. TenTags provides the document model and rendering logic; openpyxl and ReportLab write the already compiled IR to their target file formats.
+TenTags provides the document model and rendering logic; openpyxl and ReportLab write the already compiled IR to their target file formats.
 
 ---
 
