@@ -62,17 +62,17 @@ Website: https://tentags.org
 Documentation: https://tentags.org/docs
 GitHub: https://github.com/Jandos77/tentags
 
-Current Version: 2.1.13
+Current Version: 2.1.14
 License: Apache License 2.0
 """
 
-__version__ = "2.1.13"
+__version__ = "2.1.14"
 __author__ = "Zhandos Mambetali"
 __license__ = "Apache-2.0"
 __copyright__ = "Copyright (c) 2026 Zhandos Mambetali"
 __homepage__ = "https://tentags.org"
 __url__ = "https://tentags.org"
-version_info = (2, 1, 13)
+version_info = (2, 1, 14)
 
 __all__ = [
     "__version__",
@@ -2410,6 +2410,23 @@ def _create_pdf_table_object(
                 ) is not None
             ]
             if rendered_images:
+                # ReportLab images are separate flowables, so a Paragraph link does
+                # not make them clickable. Apply the link to the containing cell.
+                if href_pdf:
+                    if str(href_pdf).startswith('#'):
+                        table_styles.append((
+                            'DESTINATION',
+                            (c, r),
+                            (c, r),
+                            str(href_pdf)[1:],
+                        ))
+                    else:
+                        table_styles.append((
+                            'HREF',
+                            (c, r),
+                            (c, r),
+                            str(href_pdf),
+                        ))
                 if val == '':
                     table_styles.extend([
                         ('LEFTPADDING', (c, r), (c, r), 0),

@@ -298,6 +298,28 @@ tentags.render('1,1,1,"black","solid",1,80, data(<img src=https://pycells.com//a
 tentags.render('1,2,1,"black","solid",0,80, data(<img src=photo.jpg w=200 h=150>, <img src=qrcode.png w=80 h=80>)')
 ```
 
+Wrap `<img>` in `<url>` when the image itself should navigate. In PDF, the
+clickable area covers the image cell including its margin. External URLs and
+internal `goto:` destinations use the same syntax as text links:
+
+```python
+import tentags
+
+external = tentags.parse(
+    '1,1,1,"black","solid-1",1,28,'
+    'data(<url=https://pycells.com>'
+    '<img src=https://pycells.com/assets/img/PyCells_mds.png w=100 h=auto m=15>'
+    '</url>)'
+)
+tentags.render_pdf(external, "clickable_image.pdf")
+
+internal = tentags.parse(
+    '2,1,1,"black","solid-1",1,28,'
+    'data(<url=goto:A2><img src=logo.png w=100 h=auto m=10></url>;Target)'
+)
+tentags.render_pdf(internal, "clickable_goto_image.pdf")
+```
+
 ### PDF image layout with `stretch` and `scale`
 
 The PDF renderer chooses between natural expansion and constrained fitting.
@@ -1180,7 +1202,7 @@ style    = '''style(
 
 entries = [
     ('<url=https://github.com/tentags>GitHub Repository</url>', 'Open Source', '<color=green>Active</color>'),
-    ('<url=https://pypi.org/project/tentags>PyPI Package</url>', 'v2.1.13',    '<u>Stable</u>'),
+    ('<url=https://pypi.org/project/tentags>PyPI Package</url>', 'v2.1.14',    '<u>Stable</u>'),
     ('<url=https://tentags.readthedocs.io>Documentation</url>',  'Read the Docs', '<color=blue>Online</color>'),
 ]
 rows = '; '.join(f'{link}, {badge}, {status}' for link, badge, status in entries)

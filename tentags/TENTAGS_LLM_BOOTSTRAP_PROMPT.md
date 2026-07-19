@@ -65,7 +65,7 @@ Public API stability:
 - Preserve old behavior unless the user explicitly asks for a breaking change.
 
 Current version:
-TenTags is currently 2.1.13. Do not change version metadata unless explicitly asked.
+TenTags is currently 2.1.14. Do not change version metadata unless explicitly asked.
 
 Bundled prompt API:
 - The installed library exposes this bootstrap prompt through `tentags.get_prompt()`.
@@ -517,6 +517,9 @@ Image rules:
 - When stretch=0 or scale constrains the image row/column, the cell geometry is authoritative. Reserve m on all sides, then proportionally fit the image into the remaining width and/or height without upscaling it beyond its requested w/h size.
 - A row scale overrides the base fixed row height: effective row height is cell_height multiplied by that row scale. A column scale supplies the renderer-native relative column width. When both apply, fit against both limits and use the stricter proportional factor.
 - Never let a PDF image cross its cell border in a fixed or scaled layout.
+- To make an image clickable, wrap the single `<img>` tag in `<url>`: `<url=https://example.com><img src=logo.png w=100 h=auto m=15></url>`.
+- In PDF, a URL-wrapped image must create a native clickable area over the image cell, including its margin. External URLs use a URI link; `goto:` uses an internal PDF destination.
+- In XLSX, the hyperlink belongs to the underlying worksheet cell because openpyxl stores the image as a separate drawing object.
 - Never hardcode example values such as w=120 or m=15. Read w, h, and m from each parsed image.
 - Do not mutate the IR attributes to perform fitting. Keep h=auto in the logical model and calculate renderer-specific drawWidth/drawHeight only inside the PDF renderer.
 - Local paths and HTTP(S) image sources are embedded in PDF and XLSX output.

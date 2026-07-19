@@ -8,6 +8,20 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.1.14] - 2026-07-19
+
+### Fixed
+- Made images wrapped in `<url>` clickable in PDF output by applying the link to the containing image cell.
+- Added native PDF URI links for external image targets and internal PDF destinations for `goto:` image targets.
+
+### Documentation
+- Documented clickable external and `goto:` images in README, EXAMPLES, and the bundled LLM prompt.
+
+### Testing
+- Added direct ReportLab cell-link and final PDF annotation coverage for URL-wrapped images.
+
+---
+
 ## [2.1.13] - 2026-07-19
 
 ### Fixed
@@ -201,14 +215,14 @@ Serializer API, Addressing Model, and Multitable Layout.
   `_Union[str, _Any]`. Fixed to be consistent with all other type annotations in the file.
 
 > **Removed from PyPI** due to a defect discovered after publication.
-> Use the latest stable **2.1.13** release instead.
+> Use the latest stable **2.1.14** release instead.
 
 ---
 
 ## [2.0.0] - yanked
 
 > **Removed from PyPI** due to `NameError: Union is not defined` on Python 3.13+ at import.  
-> Use the latest stable **2.1.13** release instead.
+> Use the latest stable **2.1.14** release instead.
 
 ### Added (carried into 2.0.2 and later)
 - `<u>` tag — underline text (HTML inline CSS, XLSX `Font(underline="single")`, PDF `UNDERLINE`)
@@ -229,7 +243,7 @@ Serializer API, Addressing Model, and Multitable Layout.
 ## [1.1.4] - yanked
 
 > **Removed from PyPI** — contained the same `NameError: Union is not defined` bug on Python 3.13+.
-> Use the latest stable **2.1.13** release instead.
+> Use the latest stable **2.1.14** release instead.
 
 ---
 

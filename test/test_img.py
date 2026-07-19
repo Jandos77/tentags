@@ -190,6 +190,43 @@ def test_pdf_img_preserves_aspect_ratio_when_fitted_to_fixed_geometry():
     )
 
 
+def test_url_wrapped_image_is_clickable_in_pdf():
+    pytest.importorskip("reportlab")
+    model = tentags.parse(
+        '1,1,1,"black","solid-1",1,28,'
+        'data(<url=https://pycells.com>'
+        '<img src=D:/TenTags/tentags_logo.png w=100 h=auto m=15>'
+        '</url>)'
+    )
+
+    table = tentags._create_pdf_table_object(model)
+    assert table._cellStyles[0][0].href == "https://pycells.com"
+
+    output = io.BytesIO()
+    tentags.render_pdf(model, output)
+    pdf_data = output.getvalue()
+    assert pdf_data.startswith(b"%PDF")
+    assert b"/URI" in pdf_data
+    assert b"https://pycells.com" in pdf_data
+
+
+def test_goto_wrapped_image_uses_pdf_destination():
+    pytest.importorskip("reportlab")
+    model = tentags.parse(
+        '2,1,1,"black","solid-1",1,28,'
+        'data(<url=goto:A2>'
+        '<img src=D:/TenTags/tentags_logo.png w=100 h=auto m=15>'
+        '</url>;Target)'
+    )
+
+    table = tentags._create_pdf_table_object(model)
+    assert table._cellStyles[0][0].destination == "tt-A2"
+
+    output = io.BytesIO()
+    tentags.render_pdf(model, output)
+    assert output.getvalue().startswith(b"%PDF")
+
+
 if __name__ == "__main__":
     _, html_path, xlsx_path, pdf_path = build_img_artifacts()
     print(f"HTML created: {html_path}")

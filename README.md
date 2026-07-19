@@ -12,9 +12,9 @@
 
 **TenTags** is a declarative template language and **Intermediate Representation (IR)** for **HTML**, **Excel (`.xlsx`)**, and **PDF** table and document generation.
 
-### 🚀 Current Release: 2.1.13
+### 🚀 Current Release: 2.1.14
 
-**TenTags 2.1.13** makes PDF image layout follow table geometry. Unconstrained `stretch=1` cells expand to the requested image size plus its variable `m` margin, while fixed or `scale()`-constrained cells proportionally fit the image inside their row and column limits. Scale geometry has priority over the base fixed cell height.
+**TenTags 2.1.14** makes images wrapped in `<url>` clickable in PDF output. External URLs create native PDF URI links, while `goto:` targets create internal PDF navigation links; the clickable area includes the image and its margin.
 
 ## Install
 
@@ -269,6 +269,18 @@ Single tags such as `<mark=...>`, `<img ...>`, and `<value=...>` are not closed.
 Local paths and HTTP(S) image sources are embedded in PDF and XLSX output. Remote images are limited to 20 MB. XLSX images use openpyxl's standard drawing anchor over the worksheet grid.
 
 PDF image layout follows the table geometry. Values such as `w=120` and `m=15` are examples, not constants: every image uses its own attributes. With `stretch=1` and no scale affecting the image row or column, the cell expands naturally to the requested image size plus `m` on all sides. With `stretch=0` or an applicable row/column scale, that geometry takes priority: PDF reserves the requested margin and proportionally fits the image into the remaining area. Row scale multiplies `cell_height`; column scale determines the relative PDF column width. If both limits apply, the stricter proportional limit is used. Images are never enlarged beyond their requested `w`/`h` dimensions.
+
+Wrap an image in `<url>` to make it clickable. HTML wraps the native image in an anchor, PDF creates a link over the image cell including its margin, and XLSX assigns the hyperlink to the underlying worksheet cell:
+
+```text
+<url=https://pycells.com><img src=https://pycells.com/assets/img/PyCells_mds.png w=100 h=auto m=15></url>
+```
+
+Internal image navigation uses the same `goto:` syntax:
+
+```text
+<url=goto:Summary><img src=summary.png w=100 h=auto m=10></url>
+```
 
 ---
 
@@ -547,8 +559,8 @@ tentags.render_pdf(model, "Enterprise_Budget_Matrix.pdf")
 ## 🛠️ API Reference
 
 ### Module Constants & Metadata
-- **`tentags.__version__`**: Library version string (e.g., `'2.1.13'`).
-- **`tentags.version_info`**: Version tuple for checking compatibility (e.g., `(2, 1, 13)`).
+- **`tentags.__version__`**: Library version string (e.g., `'2.1.14'`).
+- **`tentags.version_info`**: Version tuple for checking compatibility (e.g., `(2, 1, 14)`).
 - **`tentags.__author__`**: Author name (`'Zhandos Mambetali'`).
 - **`tentags.__license__`**: Project license (`'Apache-2.0'`).
 - **`tentags.__homepage__`**: Link to home website (`'https://tentags.org'`).
