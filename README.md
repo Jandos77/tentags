@@ -12,9 +12,9 @@
 
 **TenTags** is a declarative template language and **Intermediate Representation (IR)** for **HTML**, **Excel (`.xlsx`)**, and **PDF** table and document generation.
 
-### 🚀 Current Release: 2.1.12
+### 🚀 Current Release: 2.1.13
 
-**TenTags 2.1.12** fixes PDF image margin behavior. Every `<img>` now keeps its own variable `w`, derives `h=auto` from the source proportions, and applies its own variable `m` independently; fixed-height PDF rows remain fixed.
+**TenTags 2.1.13** makes PDF image layout follow table geometry. Unconstrained `stretch=1` cells expand to the requested image size plus its variable `m` margin, while fixed or `scale()`-constrained cells proportionally fit the image inside their row and column limits. Scale geometry has priority over the base fixed cell height.
 
 ## Install
 
@@ -268,7 +268,7 @@ Single tags such as `<mark=...>`, `<img ...>`, and `<value=...>` are not closed.
 
 Local paths and HTTP(S) image sources are embedded in PDF and XLSX output. Remote images are limited to 20 MB. XLSX images use openpyxl's standard drawing anchor over the worksheet grid.
 
-For PDF output with `stretch=0`, the row keeps its fixed `cell_height`, while the `<img>` dimensions remain independent. Values such as `w=120` and `m=15` are examples, not constants: PDF uses the actual `w` and `m` of each image. With `h=auto`, height is calculated from that image's `w` and source proportions; `m` is applied separately and neither resizes the image nor expands the fixed PDF row.
+PDF image layout follows the table geometry. Values such as `w=120` and `m=15` are examples, not constants: every image uses its own attributes. With `stretch=1` and no scale affecting the image row or column, the cell expands naturally to the requested image size plus `m` on all sides. With `stretch=0` or an applicable row/column scale, that geometry takes priority: PDF reserves the requested margin and proportionally fits the image into the remaining area. Row scale multiplies `cell_height`; column scale determines the relative PDF column width. If both limits apply, the stricter proportional limit is used. Images are never enlarged beyond their requested `w`/`h` dimensions.
 
 ---
 
@@ -547,8 +547,8 @@ tentags.render_pdf(model, "Enterprise_Budget_Matrix.pdf")
 ## 🛠️ API Reference
 
 ### Module Constants & Metadata
-- **`tentags.__version__`**: Library version string (e.g., `'2.1.12'`).
-- **`tentags.version_info`**: Version tuple for checking compatibility (e.g., `(2, 1, 12)`).
+- **`tentags.__version__`**: Library version string (e.g., `'2.1.13'`).
+- **`tentags.version_info`**: Version tuple for checking compatibility (e.g., `(2, 1, 13)`).
 - **`tentags.__author__`**: Author name (`'Zhandos Mambetali'`).
 - **`tentags.__license__`**: Project license (`'Apache-2.0'`).
 - **`tentags.__homepage__`**: Link to home website (`'https://tentags.org'`).

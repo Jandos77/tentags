@@ -62,17 +62,17 @@ Website: https://tentags.org
 Documentation: https://tentags.org/docs
 GitHub: https://github.com/Jandos77/tentags
 
-Current Version: 2.1.12
+Current Version: 2.1.13
 License: Apache License 2.0
 """
 
-__version__ = "2.1.12"
+__version__ = "2.1.13"
 __author__ = "Zhandos Mambetali"
 __license__ = "Apache-2.0"
 __copyright__ = "Copyright (c) 2026 Zhandos Mambetali"
 __homepage__ = "https://tentags.org"
 __url__ = "https://tentags.org"
-version_info = (2, 1, 12)
+version_info = (2, 1, 13)
 
 __all__ = [
     "__version__",
@@ -2174,7 +2174,13 @@ def _create_pdf_table_object(
         except Exception:
             return default
 
-    def pdf_image(attrs: dict):
+    col_widths = None
+    if model.col_scales and available_width and model.cols > 0:
+        col_weights = [model.col_scales.get(col, 1) for col in range(model.cols)]
+        total_weight = sum(col_weights)
+        col_widths = [available_width * weight / total_weight for weight in col_weights]
+
+    def pdf_image(attrs: dict, max_width: float = None, max_height: float = None):
         src = str(attrs.get("src", ""))
         if not src:
             return None
@@ -2200,6 +2206,17 @@ def _create_pdf_table_object(
                 image.drawHeight = float(height)
                 if original_height:
                     image.drawWidth = original_width * image.drawHeight / original_height
+
+            width_limit = None if max_width is None else max(0.0, max_width - 2 * margin)
+            height_limit = None if max_height is None else max(0.0, max_height - 2 * margin)
+            fit_factors = [1.0]
+            if width_limit is not None and image.drawWidth > 0:
+                fit_factors.append(width_limit / image.drawWidth)
+            if height_limit is not None and image.drawHeight > 0:
+                fit_factors.append(height_limit / image.drawHeight)
+            fit_factor = max(0.0, min(fit_factors))
+            image.drawWidth *= fit_factor
+            image.drawHeight *= fit_factor
 
             if margin <= 0:
                 return image
@@ -2369,13 +2386,31 @@ def _create_pdf_table_object(
                     cell_text = f'<link href="{href_pdf}">{cell_text}</link>'
                 content.append(Paragraph(cell_text, p_style))
 
+            row_limit = None
+            if r in model.row_scales:
+                row_limit = model.cell_height * model.row_scales[r]
+            elif model.stretch == 0:
+                row_limit = model.cell_height
+
+            col_limit = col_widths[c] if col_widths is not None else None
+            image_height_limit = (
+                row_limit / len(images)
+                if row_limit is not None and val == '' and images
+                else row_limit
+            )
             rendered_images = [
                 rendered
                 for image_attrs in images
-                if (rendered := pdf_image(image_attrs)) is not None
+                if (
+                    rendered := pdf_image(
+                        image_attrs,
+                        max_width=col_limit,
+                        max_height=image_height_limit,
+                    )
+                ) is not None
             ]
             if rendered_images:
-                if model.stretch == 0 and val == '':
+                if val == '':
                     table_styles.extend([
                         ('LEFTPADDING', (c, r), (c, r), 0),
                         ('RIGHTPADDING', (c, r), (c, r), 0),
@@ -2404,12 +2439,6 @@ def _create_pdf_table_object(
             else:
                 row_data.append(content)
         data_matrix.append(row_data)
-
-    col_widths = None
-    if model.col_scales and available_width and model.cols > 0:
-        col_weights = [model.col_scales.get(col, 1) for col in range(model.cols)]
-        total_weight = sum(col_weights)
-        col_widths = [available_width * weight / total_weight for weight in col_weights]
 
     row_heights = None
     min_row_heights = None

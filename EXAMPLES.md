@@ -283,7 +283,9 @@ Size rules:
 - `h=auto` preserves proportions.
 - `m` is margin in pixels on all four sides.
 - If the sixth preamble argument (`stretch`) is `1`, image cells can expand with the rendered image size.
-- In PDF with `stretch=0`, the row remains fixed at the seventh preamble argument (`cell_height`, including vertical scale), while the `<img>` dimensions remain unchanged. `h=auto` stays automatic from the source proportions and `w`; `m` is applied separately and does not resize the image or expand the fixed row.
+- In PDF with `stretch=1` and no scale affecting the image row or column, the cell expands to the requested image size plus `m` on every side.
+- In PDF with `stretch=0`, or when row/column scale applies, the table geometry takes priority. Margin is reserved first and the image is proportionally fitted into the remaining area without being enlarged beyond its requested dimensions.
+- Row scale multiplies `cell_height`; column scale determines relative column width. When both constrain an image, the stricter proportional limit wins.
 - In `stretch=1` mode, if only `w` is provided, height is automatic.
 - In `stretch=1` mode, if only `h` is provided, width is automatic.
 - In `stretch=1` mode, if both are numbers, the image is rendered at exactly that size.
@@ -295,6 +297,52 @@ tentags.render('1,1,1,"black","solid",1,80, data(<img src=https://pycells.com//a
 
 tentags.render('1,2,1,"black","solid",0,80, data(<img src=photo.jpg w=200 h=150>, <img src=qrcode.png w=80 h=80>)')
 ```
+
+### PDF image layout with `stretch` and `scale`
+
+The PDF renderer chooses between natural expansion and constrained fitting.
+
+**1. Natural expansion**
+
+`stretch=1` and no scale affecting the image row or column means that the cell grows to the image size plus margin:
+
+```text
+1,1,1,"black","solid-1",1,80,
+data(<img src=logo.png w=120 h=auto m=15>)
+```
+
+The requested image width is `120`; `h=auto` preserves the source proportions; the cell includes an additional `15` pixels on every side.
+
+**2. Fixed row**
+
+With `stretch=0`, `cell_height` is authoritative. The image is proportionally fitted after reserving its margin:
+
+```text
+1,1,1,"black","solid-1",0,80,
+data(<img src=logo.png w=120 h=auto m=10>)
+```
+
+For a square source, the available image area is `60` pixels high (`80 - 10 - 10`). The row remains `80` pixels high.
+
+**3. Row scale has priority over base height**
+
+```text
+1,1,1,"black","solid-1",0,40,
+scale(A1=3,1),
+data(<img src=logo.png w=200 h=auto m=10>)
+```
+
+Row 1 is `40 x 3 = 120` pixels high. After margin, the image can use up to `100` pixels of height.
+
+**4. Row and column scale together**
+
+```text
+1,2,1,"black","solid-1",0,50,
+scale(A1=2,3),
+data(<img src=logo.png w=500 h=auto m=10>, Description)
+```
+
+The row and column both constrain the image. PDF preserves the aspect ratio and uses whichever available dimension produces the smaller proportional image. Scale changes the cell geometry; it does not replace the image's own `w`, `h`, or `m` attributes.
 
 **Rendering per target:**
 - **HTML** — native `<img>` inside the `<td>`.
@@ -1132,7 +1180,7 @@ style    = '''style(
 
 entries = [
     ('<url=https://github.com/tentags>GitHub Repository</url>', 'Open Source', '<color=green>Active</color>'),
-    ('<url=https://pypi.org/project/tentags>PyPI Package</url>', 'v2.1.12',    '<u>Stable</u>'),
+    ('<url=https://pypi.org/project/tentags>PyPI Package</url>', 'v2.1.13',    '<u>Stable</u>'),
     ('<url=https://tentags.readthedocs.io>Documentation</url>',  'Read the Docs', '<color=blue>Online</color>'),
 ]
 rows = '; '.join(f'{link}, {badge}, {status}' for link, badge, status in entries)

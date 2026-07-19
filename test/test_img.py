@@ -1,4 +1,5 @@
 from pathlib import Path
+import io
 import sys
 
 import pytest
@@ -96,6 +97,97 @@ def test_pdf_img_uses_variable_width_margin_and_auto_height(width, margin):
         assert rendered._cellStyles[0][0].rightPadding == margin
         assert rendered._cellStyles[0][0].topPadding == margin
         assert rendered._cellStyles[0][0].bottomPadding == margin
+
+
+@pytest.mark.parametrize(
+    "formula,expected_row,expected_image,expected_wrapper,expected_col",
+    [
+        (
+            '1,1,1,"#64748b","solid-1",1,80,'
+            'data(<img src=D:/TenTags/tentags_logo.png w=120 h=auto m=15>)',
+            150,
+            120,
+            150,
+            None,
+        ),
+        (
+            '1,1,1,"#64748b","solid-1",0,80,'
+            'data(<img src=D:/TenTags/tentags_logo.png w=120 h=auto m=10>)',
+            80,
+            60,
+            80,
+            None,
+        ),
+        (
+            '1,1,1,"#64748b","solid-1",0,40,scale(A1=3,1),'
+            'data(<img src=D:/TenTags/tentags_logo.png w=200 h=auto m=10>)',
+            120,
+            100,
+            120,
+            None,
+        ),
+        (
+            '1,2,1,"#64748b","solid-1",1,40,scale(A1=1,3),'
+            'data(<img src=D:/TenTags/tentags_logo.png w=200 h=auto m=10>,Text)',
+            150,
+            130,
+            150,
+            150,
+        ),
+        (
+            '1,2,1,"#64748b","solid-1",0,50,scale(A1=2,3),'
+            'data(<img src=D:/TenTags/tentags_logo.png w=200 h=auto m=10>,Text)',
+            100,
+            80,
+            100,
+            150,
+        ),
+    ],
+)
+def test_pdf_img_obeys_stretch_scale_and_margin_layout(
+    formula,
+    expected_row,
+    expected_image,
+    expected_wrapper,
+    expected_col,
+):
+    pytest.importorskip("reportlab")
+    model = tentags.parse(formula)
+    table = tentags._create_pdf_table_object(model, available_width=200)
+    table.wrap(200, 500)
+
+    wrapper = table._cellvalues[0][0][-1]
+    image = wrapper._cellvalues[0][0]
+    assert table._rowHeights[0] == expected_row
+    assert image.drawWidth == expected_image
+    assert image.drawHeight == expected_image
+    assert wrapper._colWidths == [expected_wrapper]
+    assert wrapper._rowHeights == [expected_wrapper]
+    if expected_col is not None:
+        assert table._colWidths[0] == expected_col
+
+    output = io.BytesIO()
+    tentags.render_pdf(model, output)
+    assert output.getvalue().startswith(b"%PDF")
+
+
+def test_pdf_img_preserves_aspect_ratio_when_fitted_to_fixed_geometry():
+    pytest.importorskip("reportlab")
+    model = tentags.parse(
+        '1,1,1,"#64748b","solid-1",0,80,'
+        'data(<img src=D:/TenTags/example.png w=200 h=auto m=10>)'
+    )
+    table = tentags._create_pdf_table_object(model, available_width=200)
+    table.wrap(200, 500)
+
+    wrapper = table._cellvalues[0][0][-1]
+    image = wrapper._cellvalues[0][0]
+    assert table._rowHeights == [80]
+    assert wrapper._rowHeights == [80]
+    assert image.drawHeight == 60
+    assert image.drawWidth / image.drawHeight == pytest.approx(
+        image.imageWidth / image.imageHeight
+    )
 
 
 if __name__ == "__main__":

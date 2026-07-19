@@ -65,7 +65,7 @@ Public API stability:
 - Preserve old behavior unless the user explicitly asks for a breaking change.
 
 Current version:
-TenTags is currently 2.1.12. Do not change version metadata unless explicitly asked.
+TenTags is currently 2.1.13. Do not change version metadata unless explicitly asked.
 
 Bundled prompt API:
 - The installed library exposes this bootstrap prompt through `tentags.get_prompt()`.
@@ -511,10 +511,49 @@ Image rules:
 - both numeric means exact dimensions.
 - m is margin in pixels on all sides.
 - If preamble stretch, the sixth arg, is 1, a cell with img expands with the image.
-- In PDF, if stretch is 0, the row height remains fixed at the seventh preamble arg cell_height (including vertical scale), but the renderer must preserve the img dimensions. In `<img w=120 h=auto m=15>`, both 120 and 15 are only example values: use the actual w and m supplied for that image. h remains automatic from the source proportions and w; m is applied separately and must never be subtracted from h or used to expand the fixed row.
+- In `<img w=120 h=auto m=15>`, both 120 and 15 are only example values: use the actual w and m supplied for that image. Keep `h=auto` proportional to the source while applying the PDF layout rules below.
+- PDF image layout uses this priority: scale geometry, then the sixth preamble argument stretch, then the image's natural requested size.
+- In PDF, when stretch=1 and neither the image row nor its column is constrained by scale, the cell expands naturally to the rendered image size plus m on all four sides.
+- When stretch=0 or scale constrains the image row/column, the cell geometry is authoritative. Reserve m on all sides, then proportionally fit the image into the remaining width and/or height without upscaling it beyond its requested w/h size.
+- A row scale overrides the base fixed row height: effective row height is cell_height multiplied by that row scale. A column scale supplies the renderer-native relative column width. When both apply, fit against both limits and use the stricter proportional factor.
+- Never let a PDF image cross its cell border in a fixed or scaled layout.
+- Never hardcode example values such as w=120 or m=15. Read w, h, and m from each parsed image.
+- Do not mutate the IR attributes to perform fitting. Keep h=auto in the logical model and calculate renderer-specific drawWidth/drawHeight only inside the PDF renderer.
 - Local paths and HTTP(S) image sources are embedded in PDF and XLSX output.
 - Remote images are limited to 20 MB.
 - XLSX images use openpyxl's standard drawing anchor over the worksheet grid; do not claim native Excel "Place in Cell" behavior.
+
+Canonical PDF image-layout examples:
+
+Natural expansion (`stretch=1`, no applicable scale):
+
+```text
+1,1,1,"black","solid-1",1,80,
+data(<img src=logo.png w=120 h=auto m=15>)
+```
+
+Fixed row (fit inside cell_height after reserving margin):
+
+```text
+1,1,1,"black","solid-1",0,80,
+data(<img src=logo.png w=120 h=auto m=10>)
+```
+
+Row scale (effective row height is 40 x 3 = 120):
+
+```text
+1,1,1,"black","solid-1",0,40,
+scale(A1=3,1),
+data(<img src=logo.png w=200 h=auto m=10>)
+```
+
+Combined row/column scale (preserve proportions and use the stricter limit):
+
+```text
+1,2,1,"black","solid-1",0,50,
+scale(A1=2,3),
+data(<img src=logo.png w=500 h=auto m=10>, Description)
+```
 
 Addressing model:
 Canonical syntax is PyCells-compatible:

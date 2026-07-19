@@ -8,6 +8,21 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.1.13] - 2026-07-19
+
+### Fixed
+- Made PDF image cells expand naturally to image size plus margin when `stretch=1` and no scale constrains their row or column.
+- Made PDF images proportionally fit within fixed-height and scaled row/column geometry while preserving the requested margin.
+- Defined scale geometry as higher priority than the base `stretch=0` cell height for image layout.
+
+### Documentation
+- Documented the PDF image-layout priority rules and canonical examples for natural, fixed-row, row-scaled, and row/column-scaled cells in README, EXAMPLES, and the bundled LLM prompt.
+
+### Testing
+- Added direct PDF geometry coverage for free image cells, fixed rows, row scale, column scale, and combined row/column scale.
+
+---
+
 ## [2.1.12] - 2026-07-19
 
 ### Fixed
@@ -186,14 +201,14 @@ Serializer API, Addressing Model, and Multitable Layout.
   `_Union[str, _Any]`. Fixed to be consistent with all other type annotations in the file.
 
 > **Removed from PyPI** due to a defect discovered after publication.
-> Use the latest stable **2.1.12** release instead.
+> Use the latest stable **2.1.13** release instead.
 
 ---
 
 ## [2.0.0] - yanked
 
 > **Removed from PyPI** due to `NameError: Union is not defined` on Python 3.13+ at import.  
-> Use the latest stable **2.1.12** release instead.
+> Use the latest stable **2.1.13** release instead.
 
 ### Added (carried into 2.0.2 and later)
 - `<u>` tag — underline text (HTML inline CSS, XLSX `Font(underline="single")`, PDF `UNDERLINE`)
@@ -214,7 +229,7 @@ Serializer API, Addressing Model, and Multitable Layout.
 ## [1.1.4] - yanked
 
 > **Removed from PyPI** — contained the same `NameError: Union is not defined` bug on Python 3.13+.
-> Use the latest stable **2.1.12** release instead.
+> Use the latest stable **2.1.13** release instead.
 
 ---
 
