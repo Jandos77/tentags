@@ -12,16 +12,15 @@ from demo_paths import demo_output_path
 
 
 ALL_TAGS_FORMULA = '''
-5,4,1,"#64748b","solid-1",0,30,
+5,4,1,"#64748b","solid-1",1,30,
 data(
 <b>Bold</b>, <i>Italic</i>, <b><i>Bold Italic</i></b>, <u>Underline</u>;
 <s>Strike</s>, <color=red>Red</color>, <bg=yellow>Yellow</bg>, <fs=18>Large</fs>;
 <left>Left</left>, <center>Center</center>, <right>Right</right>, <url=https://example.com>Link</url>;
-<mark=Source>Marked, <value=A4>, <img src=missing.png w=20 h=auto m=2>, Plain;
+<mark=Source>Marked, <value=A4>, <img src=D:/TenTags/tentags_logo.png w=120 h=auto m=15>, Plain;
 <cm>Column group, Second cell</cm>, Third cell, Fourth cell
 )
 '''
-
 
 def build_all_tag_artifacts():
     html_output = demo_output_path("all_tags.html")
@@ -51,7 +50,9 @@ def test_all_content_and_presentation_tags_reach_ir():
     assert model.cells[2][3].link.target == "https://example.com"
     assert model.cells[3][0].mark == "Source"
     assert model.cells[3][1].raw_expr == "Marked"
-    assert model.cells[3][2].images == [{"src": "missing.png", "w": "20", "h": "auto", "m": "2"}]
+    assert model.cells[3][2].images == [
+        {"src": "D:/TenTags/tentags_logo.png", "w": "120", "h": "auto", "m": "15"}
+    ]
     assert model.cells[4][0].cm_block_id is not None
     assert model.cells[4][0].border_flags & tentags.BorderFlags.HIDE_RIGHT
     assert model.cells[4][1].border_flags & tentags.BorderFlags.HIDE_LEFT
@@ -87,8 +88,9 @@ def test_all_tags_render_to_html_xlsx_and_pdf():
     assert "font-size:18px;" in html
     assert 'href="https://example.com"' in html
     assert 'id="tt-mark-Source"' in html
-    assert 'src="missing.png"' in html
-    assert "margin:2px" in html
+    assert 'src="D:/TenTags/tentags_logo.png"' in html
+    assert 'width="120"' in html
+    assert "margin:15px" in html
 
     workbook = openpyxl.load_workbook(xlsx_output)
     sheet = workbook["Table"]
@@ -103,7 +105,8 @@ def test_all_tags_render_to_html_xlsx_and_pdf():
     assert [sheet.cell(3, col).alignment.horizontal for col in range(1, 4)] == ["left", "center", "right"]
     assert sheet["D3"].hyperlink.target == "https://example.com"
     assert sheet["B4"].value == "Marked"
-    assert sheet["C4"].value == "missing.png"
+    assert sheet["C4"].value is None
+    assert len(sheet._images) == 1
 
     pdf_fonts = tentags._pdf_font_names()
     assert pdf_fonts["bold"] != pdf_fonts["regular"]

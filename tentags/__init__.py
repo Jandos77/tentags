@@ -62,17 +62,17 @@ Website: https://tentags.org
 Documentation: https://tentags.org/docs
 GitHub: https://github.com/Jandos77/tentags
 
-Current Version: 2.1.10
+Current Version: 2.1.11
 License: Apache License 2.0
 """
 
-__version__ = "2.1.10"
+__version__ = "2.1.11"
 __author__ = "Zhandos Mambetali"
 __license__ = "Apache-2.0"
 __copyright__ = "Copyright (c) 2026 Zhandos Mambetali"
 __homepage__ = "https://tentags.org"
 __url__ = "https://tentags.org"
-version_info = (2, 1, 10)
+version_info = (2, 1, 11)
 
 __all__ = [
     "__version__",
@@ -1081,6 +1081,22 @@ def _render_img_html(attrs: dict, forced_height: int = None, expand_cell: bool =
     html_attrs.append(f'style="{";".join(style_parts)};"')
     return f'<img {" ".join(html_attrs)}>'
 
+def _load_image_source(source_path: str):
+    source_path = str(source_path or "")
+    if source_path.startswith(("http://", "https://")):
+        request = _urllib_request.Request(
+            source_path,
+            headers={"User-Agent": "Mozilla/5.0 (tentags)"},
+        )
+        with _urllib_request.urlopen(request, timeout=20) as response:
+            content = response.read(20 * 1024 * 1024 + 1)
+        if len(content) > 20 * 1024 * 1024:
+            raise ValueError("Remote image exceeds the 20 MB limit.")
+        return _io.BytesIO(content)
+    if _os.path.exists(source_path):
+        return source_path
+    return None
+
 def _scan_data_content(content: str):
     """
     Scans the data(...) inner string and extracts tokens.
@@ -1987,13 +2003,12 @@ def _write_model_to_sheet(
 
             if images:
                 img_src = images[0].get('src', '')
-                if img_src.startswith(('http://', 'https://')):
-                    cell_ref.hyperlink = img_src
-                elif _os.path.exists(img_src):
-                    try:
+                try:
+                    image_source = _load_image_source(img_src)
+                    if image_source is not None:
                         from openpyxl.drawing.image import Image as XLImage
 
-                        sheet_img = XLImage(img_src)
+                        sheet_img = XLImage(image_source)
                         width = images[0].get('w')
                         height = images[0].get('h')
                         original_width = sheet_img.width
@@ -2014,8 +2029,11 @@ def _write_model_to_sheet(
                         ws.add_image(sheet_img, cell_ref.coordinate)
                         if not val:
                             cell_ref.value = None
-                    except Exception:
-                        pass
+                    elif img_src.startswith(('http://', 'https://')):
+                        cell_ref.hyperlink = img_src
+                except Exception:
+                    if img_src.startswith(('http://', 'https://')):
+                        cell_ref.hyperlink = img_src
             
             if apply_to_inner:
                 left_s = border_side
@@ -2140,7 +2158,7 @@ def _create_pdf_table_object(
     available_width: float = None,
 ):
     from reportlab.lib import colors
-    from reportlab.platypus import Table, TableStyle, Paragraph
+    from reportlab.platypus import Image as PDFImage, Table, TableStyle, Paragraph
     from reportlab.lib.styles import ParagraphStyle
     current_target = address_context or _make_address_target(model)
     resolver = address_resolver or _local_address_resolver(current_target)
@@ -2155,6 +2173,53 @@ def _create_pdf_table_object(
             return colors.HexColor('#' + normalized[-6:])
         except Exception:
             return default
+
+    def pdf_image(attrs: dict, forced_height: float = None):
+        src = str(attrs.get("src", ""))
+        if not src:
+            return None
+        try:
+            image_source = _load_image_source(src)
+            if image_source is None:
+                return None
+            image = PDFImage(image_source)
+            original_width = float(image.imageWidth or image.drawWidth or 0)
+            original_height = float(image.imageHeight or image.drawHeight or 0)
+            width = attrs.get("w")
+            height = attrs.get("h")
+
+            if forced_height is not None:
+                image.drawHeight = forced_height
+                if original_height:
+                    image.drawWidth = original_width * forced_height / original_height
+            elif width and width != "auto" and height and height != "auto":
+                image.drawWidth = float(width)
+                image.drawHeight = float(height)
+            elif width and width != "auto":
+                image.drawWidth = float(width)
+                if original_width:
+                    image.drawHeight = original_height * image.drawWidth / original_width
+            elif height and height != "auto":
+                image.drawHeight = float(height)
+                if original_height:
+                    image.drawWidth = original_width * image.drawHeight / original_height
+
+            margin = float(attrs.get("m") or 0)
+            if margin <= 0:
+                return image
+            return Table(
+                [[image]],
+                colWidths=[image.drawWidth + 2 * margin],
+                rowHeights=[image.drawHeight + 2 * margin],
+                style=TableStyle([
+                    ("LEFTPADDING", (0, 0), (-1, -1), margin),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), margin),
+                    ("TOPPADDING", (0, 0), (-1, -1), margin),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), margin),
+                ]),
+            )
+        except Exception:
+            return None
 
     data_matrix = []
     table_styles = []
@@ -2229,9 +2294,6 @@ def _create_pdf_table_object(
                 images = cell.images
                 link = cell.link
                 mark = cell.mark
-            if images and not val:
-                val = images[0].get('src', '')
-
             # Background fill
             if 'background-color' in cell_styles:
                 bg_c = to_rl_color(cell_styles['background-color'])
@@ -2282,21 +2344,22 @@ def _create_pdf_table_object(
                 table_styles.append(('TEXTCOLOR', (c, r), (c, r), colors.HexColor('#0563C1')))
                 table_styles.append(('UNDERLINE', (c, r), (c, r)))
 
+            rl_align = 1 # center
+            if h_align == 'LEFT':
+                rl_align = 0
+            elif h_align == 'RIGHT':
+                rl_align = 2
+
+            p_style = ParagraphStyle(
+                f'Cell_{r}_{c}',
+                fontName=font_name,
+                fontSize=font_size,
+                leading=font_size + 3,
+                textColor=font_color,
+                alignment=rl_align
+            )
+            content = []
             if val != '':
-                rl_align = 1 # center
-                if h_align == 'LEFT':
-                    rl_align = 0
-                elif h_align == 'RIGHT':
-                    rl_align = 2
-                
-                p_style = ParagraphStyle(
-                    f'Cell_{r}_{c}',
-                    fontName=font_name,
-                    fontSize=font_size,
-                    leading=font_size + 3,
-                    textColor=font_color,
-                    alignment=rl_align
-                )
                 anchors = [f'<a name="{_html_cell_id(r, c, current_target.pdf_prefix)}"/>']
                 if mark:
                     anchors.append(f'<a name="{_html_mark_id(mark, current_target.pdf_prefix)}"/>')
@@ -2307,9 +2370,36 @@ def _create_pdf_table_object(
                     cell_text = f'<strike>{cell_text}</strike>'
                 if href_pdf:
                     cell_text = f'<link href="{href_pdf}">{cell_text}</link>'
-                row_data.append(Paragraph(cell_text, p_style))
-            else:
+                content.append(Paragraph(cell_text, p_style))
+
+            forced_height = model.cell_height * model.row_scales.get(r, 1) if model.stretch == 0 else None
+            rendered_images = [
+                rendered
+                for image_attrs in images
+                if (rendered := pdf_image(image_attrs, forced_height=forced_height)) is not None
+            ]
+            if rendered_images:
+                if val == '':
+                    anchors = [f'<a name="{_html_cell_id(r, c, current_target.pdf_prefix)}"/>']
+                    if mark:
+                        anchors.append(f'<a name="{_html_mark_id(mark, current_target.pdf_prefix)}"/>')
+                    anchor_style = ParagraphStyle(
+                        f'ImageAnchor_{r}_{c}',
+                        fontName=font_name,
+                        fontSize=1,
+                        leading=1,
+                    )
+                    content.append(Paragraph("".join(anchors) + "&#8203;", anchor_style))
+                content.extend(rendered_images)
+            elif images and val == '':
+                content.append(Paragraph(str(images[0].get('src', '')), p_style))
+
+            if not content:
                 row_data.append("")
+            elif len(content) == 1:
+                row_data.append(content[0])
+            else:
+                row_data.append(content)
         data_matrix.append(row_data)
 
     col_widths = None

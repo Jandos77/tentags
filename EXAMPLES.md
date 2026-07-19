@@ -290,15 +290,17 @@ Size rules:
 ```python
 tentags.render('1,1,1,"black","solid",1,80, data(<img src=logo.png w=120 h=auto m=15>)')
 
-tentags.render('1,1,1,"black","solid",1,80, data(<img src=https://pycells.com/assets/img/PyCells_mds.png w=120 h=auto>)')
+tentags.render('1,1,1,"black","solid",1,80, data(<img src=https://pycells.com//assets/img/PyCells_mds.png w=120 h=auto m=15>)')
 
 tentags.render('1,2,1,"black","solid",0,80, data(<img src=photo.jpg w=200 h=150>, <img src=qrcode.png w=80 h=80>)')
 ```
 
 **Rendering per target:**
 - **HTML** — native `<img>` inside the `<td>`.
-- **Excel (XLSX)** — local files are embedded when supported by `openpyxl`; remote URLs fall back to a linked `src`.
-- **PDF** — falls back to the image `src` text.
+- **Excel (XLSX)** — local and HTTP(S) images are embedded with openpyxl's standard drawing anchor.
+- **PDF** — local and HTTP(S) images are embedded; dimensions and margin are applied to the image flowable.
+
+Remote images are limited to 20 MB.
 
 ---
 
@@ -1129,7 +1131,7 @@ style    = '''style(
 
 entries = [
     ('<url=https://github.com/tentags>GitHub Repository</url>', 'Open Source', '<color=green>Active</color>'),
-    ('<url=https://pypi.org/project/tentags>PyPI Package</url>', 'v2.1.10',    '<u>Stable</u>'),
+    ('<url=https://pypi.org/project/tentags>PyPI Package</url>', 'v2.1.11',    '<u>Stable</u>'),
     ('<url=https://tentags.readthedocs.io>Documentation</url>',  'Read the Docs', '<color=blue>Online</color>'),
 ]
 rows = '; '.join(f'{link}, {badge}, {status}' for link, badge, status in entries)

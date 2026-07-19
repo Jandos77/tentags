@@ -8,6 +8,20 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.1.11] - 2026-07-19
+
+### Fixed
+- Embedded real local images in PDF cells instead of rendering the image `src` as text.
+- Added HTTP(S) image loading and embedding for PDF and XLSX, with a 20 MB remote-image limit.
+- Applied `w`, proportional `h=auto`, exact numeric dimensions, and `m` margin to PDF image flowables.
+- Preserved image-cell PDF anchors and the previous text fallback when an image cannot be loaded.
+
+### Testing
+- Added a dedicated direct `test_img.py` that renders the provided local and remote image sources to HTML, XLSX, and PDF artifacts.
+- Added assertions for parsed image attributes, HTML dimensions and margins, XLSX drawing sizes, and real PDF image objects.
+
+---
+
 ## [2.1.10] - 2026-07-19
 
 ### Added
@@ -155,14 +169,14 @@ Serializer API, Addressing Model, and Multitable Layout.
   `_Union[str, _Any]`. Fixed to be consistent with all other type annotations in the file.
 
 > **Removed from PyPI** due to a defect discovered after publication.
-> Use the latest stable **2.1.10** release instead.
+> Use the latest stable **2.1.11** release instead.
 
 ---
 
 ## [2.0.0] - yanked
 
 > **Removed from PyPI** due to `NameError: Union is not defined` on Python 3.13+ at import.  
-> Use the latest stable **2.1.10** release instead.
+> Use the latest stable **2.1.11** release instead.
 
 ### Added (carried into 2.0.2 and later)
 - `<u>` tag — underline text (HTML inline CSS, XLSX `Font(underline="single")`, PDF `UNDERLINE`)
@@ -183,7 +197,7 @@ Serializer API, Addressing Model, and Multitable Layout.
 ## [1.1.4] - yanked
 
 > **Removed from PyPI** — contained the same `NameError: Union is not defined` bug on Python 3.13+.
-> Use the latest stable **2.1.10** release instead.
+> Use the latest stable **2.1.11** release instead.
 
 ---
 

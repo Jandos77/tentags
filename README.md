@@ -12,9 +12,9 @@
 
 **TenTags** is a declarative template language and **Intermediate Representation (IR)** for **HTML**, **Excel (`.xlsx`)**, and **PDF** table and document generation.
 
-### 🚀 Current Release: 2.1.10
+### 🚀 Current Release: 2.1.11
 
-**TenTags 2.1.10** adds optional single-table PDF settings and consistent `A3`, `A4`, `A5`, `letter`, `legal`, and `tabloid` page-size support for both single-table and MultiTable PDF output. PDF output defaults to A4 portrait.
+**TenTags 2.1.11** embeds local and remote HTTP(S) `<img>` sources in PDF and XLSX output. PDF image rendering now honors `w`, `h=auto`, and `m`; XLSX continues to use the standard openpyxl drawing anchor.
 
 ## Install
 
@@ -265,6 +265,8 @@ Tags can be used in `style(...)` and `data(...)`. In `style(...)`, tags usually 
 | `<value=...>` | Insert value from a local cell or mark. | `<value=B2>` |
 
 Single tags such as `<mark=...>`, `<img ...>`, and `<value=...>` are not closed.
+
+Local paths and HTTP(S) image sources are embedded in PDF and XLSX output. Remote images are limited to 20 MB. XLSX images use openpyxl's standard drawing anchor over the worksheet grid.
 
 ---
 
@@ -543,8 +545,8 @@ tentags.render_pdf(model, "Enterprise_Budget_Matrix.pdf")
 ## 🛠️ API Reference
 
 ### Module Constants & Metadata
-- **`tentags.__version__`**: Library version string (e.g., `'2.1.10'`).
-- **`tentags.version_info`**: Version tuple for checking compatibility (e.g., `(2, 1, 10)`).
+- **`tentags.__version__`**: Library version string (e.g., `'2.1.11'`).
+- **`tentags.version_info`**: Version tuple for checking compatibility (e.g., `(2, 1, 11)`).
 - **`tentags.__author__`**: Author name (`'Zhandos Mambetali'`).
 - **`tentags.__license__`**: Project license (`'Apache-2.0'`).
 - **`tentags.__homepage__`**: Link to home website (`'https://tentags.org'`).

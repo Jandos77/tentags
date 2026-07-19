@@ -65,7 +65,7 @@ Public API stability:
 - Preserve old behavior unless the user explicitly asks for a breaking change.
 
 Current version:
-TenTags is currently 2.1.10. Do not change version metadata unless explicitly asked.
+TenTags is currently 2.1.11. Do not change version metadata unless explicitly asked.
 
 Bundled prompt API:
 - The installed library exposes this bootstrap prompt through `tentags.get_prompt()`.
@@ -511,6 +511,9 @@ Image rules:
 - m is margin in pixels on all sides.
 - If preamble stretch, the sixth arg, is 1, a cell with img expands with the image.
 - If stretch is 0, force image h to the seventh preamble arg cell_height and w=auto.
+- Local paths and HTTP(S) image sources are embedded in PDF and XLSX output.
+- Remote images are limited to 20 MB.
+- XLSX images use openpyxl's standard drawing anchor over the worksheet grid; do not claim native Excel "Place in Cell" behavior.
 
 Addressing model:
 Canonical syntax is PyCells-compatible:
