@@ -23,7 +23,7 @@ BORDER_CASES = [
 
 def _formula(border_style):
     return (
-        f'3,3,2,"#334155","{border_style}",0,32,'
+        f'3,3,1,"#334155","{border_style}",0,32,'
         'style(<bg=#dbeafe><color=red><b>, , </b></bg>; <bg=white>, , </bg>; <bg=#f8fafc>, , </color></bg>),'
         'data(<cm>A, B, C</cm>; <rm>D</rm>, E, F; <rm>G</rm>, H, I)'
     )
@@ -89,9 +89,10 @@ def test_border_styles_are_preserved_in_html_xlsx_and_pdf(
     pytest.importorskip("reportlab")
     model = tentags.parse(_formula(border_style))
     css_style = border_style.split("-", 1)[0]
+    expected_xlsx_style = "thin" if css_style == "solid" and model.border_width == 1 else xlsx_style
 
     html = tentags.render_html(model)
-    css_border = f"border:2px {css_style} #334155;"
+    css_border = f"border:{model.border_width}px {css_style} #334155;"
     if mode == "none":
         assert css_border not in html
     elif mode == "outer":
@@ -116,10 +117,10 @@ def test_border_styles_are_preserved_in_html_xlsx_and_pdf(
                 assert cell.border.top.style is None
                 assert cell.border.bottom.style is None
     else:
-        assert sheet["A1"].border.top.style == xlsx_style
-        assert sheet["A1"].border.left.style == xlsx_style
-        assert sheet["C3"].border.right.style == xlsx_style
-        assert sheet["C3"].border.bottom.style == xlsx_style
+        assert sheet["A1"].border.top.style == expected_xlsx_style
+        assert sheet["A1"].border.left.style == expected_xlsx_style
+        assert sheet["C3"].border.right.style == expected_xlsx_style
+        assert sheet["C3"].border.bottom.style == expected_xlsx_style
         if mode == "outer":
             assert sheet["A1"].border.right.style is None
             assert sheet["A1"].border.bottom.style is None
@@ -130,10 +131,10 @@ def test_border_styles_are_preserved_in_html_xlsx_and_pdf(
             assert sheet["B1"].border.left.style is None
             assert sheet["A2"].border.bottom.style is None
             assert sheet["A3"].border.top.style is None
-            assert sheet["A2"].border.right.style == xlsx_style
-            assert sheet["B2"].border.left.style == xlsx_style
-            assert sheet["B2"].border.bottom.style == xlsx_style
-            assert sheet["B3"].border.top.style == xlsx_style
+            assert sheet["A2"].border.right.style == expected_xlsx_style
+            assert sheet["B2"].border.left.style == expected_xlsx_style
+            assert sheet["B2"].border.bottom.style == expected_xlsx_style
+            assert sheet["B3"].border.top.style == expected_xlsx_style
 
     pdf_table = tentags._create_pdf_table_object(model, available_width=360)
     if mode == "none":

@@ -65,7 +65,7 @@ Public API stability:
 - Preserve old behavior unless the user explicitly asks for a breaking change.
 
 Current version:
-TenTags is currently 2.1.9. Do not change version metadata unless explicitly asked.
+TenTags is currently 2.1.10. Do not change version metadata unless explicitly asked.
 
 Bundled prompt API:
 - The installed library exposes this bootstrap prompt through `tentags.get_prompt()`.
@@ -663,7 +663,8 @@ Canonical settings style:
 - The library owns export settings. Tests must not invent ordering/filtering/output logic outside tentags.
 - Current API supports settings=HTML_SETTINGS, settings=XLSX_SETTINGS, and settings=PDF_SETTINGS.
 - Settings can include output, table_order, columns, renderer options, and layout/export options.
-- Public defaults live in DEFAULT_MULTITABLE_HTML_SETTINGS, DEFAULT_MULTITABLE_XLSX_SETTINGS, and DEFAULT_MULTITABLE_PDF_SETTINGS.
+- Single-table render_pdf(..., settings=PDF_SETTINGS) defaults to A4 portrait and accepts page_size (`A3`, `A4`, `A5`, `letter`, `legal`, or `tabloid`), orientation, and margins.
+- Public defaults live in DEFAULT_PDF_SETTINGS, DEFAULT_MULTITABLE_HTML_SETTINGS, DEFAULT_MULTITABLE_XLSX_SETTINGS, and DEFAULT_MULTITABLE_PDF_SETTINGS.
 
 Example:
 

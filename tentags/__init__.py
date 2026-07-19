@@ -62,17 +62,17 @@ Website: https://tentags.org
 Documentation: https://tentags.org/docs
 GitHub: https://github.com/Jandos77/tentags
 
-Current Version: 2.1.9
+Current Version: 2.1.10
 License: Apache License 2.0
 """
 
-__version__ = "2.1.9"
+__version__ = "2.1.10"
 __author__ = "Zhandos Mambetali"
 __license__ = "Apache-2.0"
 __copyright__ = "Copyright (c) 2026 Zhandos Mambetali"
 __homepage__ = "https://tentags.org"
 __url__ = "https://tentags.org"
-version_info = (2, 1, 9)
+version_info = (2, 1, 10)
 
 __all__ = [
     "__version__",
@@ -95,6 +95,7 @@ __all__ = [
     "multitable_html",
     "multitable_xlsx",
     "multitable_pdf",
+    "DEFAULT_PDF_SETTINGS",
     "DEFAULT_MULTITABLE_HTML_SETTINGS",
     "DEFAULT_MULTITABLE_XLSX_SETTINGS",
     "DEFAULT_MULTITABLE_PDF_SETTINGS",
@@ -160,6 +161,12 @@ DEFAULT_MULTITABLE_XLSX_SETTINGS = {
     "mode": "sheets",
     "gap": 3,
     "show_titles": True,
+}
+
+DEFAULT_PDF_SETTINGS = {
+    "page_size": "A4",
+    "orientation": "portrait",
+    "margins": (36, 36, 36, 36),
 }
 
 DEFAULT_MULTITABLE_PDF_SETTINGS = {
@@ -817,6 +824,31 @@ def _xlsx_settings(defaults: dict, settings: dict = None, overrides: dict = None
 
 def _pdf_settings(defaults: dict, settings: dict = None, overrides: dict = None) -> dict:
     merged = _merge_settings(defaults, settings, overrides)
+    page_size = str(merged.get("page_size", "A4")).strip().lower()
+    page_sizes = {
+        "a3": "A3",
+        "a4": "A4",
+        "a5": "A5",
+        "letter": "letter",
+        "legal": "legal",
+        "tabloid": "tabloid",
+    }
+    if page_size not in page_sizes:
+        raise ValueError('PDF page_size must be "A3", "A4", "A5", "letter", "legal", or "tabloid".')
+    merged["page_size"] = page_sizes[page_size]
+
+    orientation = str(merged.get("orientation", "portrait")).strip().lower()
+    if orientation not in ("portrait", "landscape"):
+        raise ValueError('PDF orientation must be "portrait" or "landscape".')
+    merged["orientation"] = orientation
+
+    margins = merged.get("margins", (36, 36, 36, 36))
+    if not isinstance(margins, (tuple, list)) or len(margins) != 4:
+        raise ValueError("PDF margins must contain four non-negative numbers: left, right, top, bottom.")
+    if any(isinstance(value, bool) or not isinstance(value, (int, float)) or value < 0 for value in margins):
+        raise ValueError("PDF margins must contain four non-negative numbers: left, right, top, bottom.")
+    merged["margins"] = tuple(margins)
+
     tables_per_row = merged.get("tables_per_row")
     if tables_per_row is not None:
         if isinstance(tables_per_row, str):
@@ -2314,13 +2346,17 @@ def render_pdf(
     filepath_or_stream: _Union[str, _Any],
     address_resolver: AddressResolver = None,
     address_context: AddressTarget = None,
+    settings: dict = None,
 ) -> None:
     """
     Renders a TableModel directly to a PDF document using ReportLab.
     Translates IR coordinates, merged regions, background fills, fonts, and borders into native ReportLab TableStyles.
+
+    When settings is omitted or empty, the document uses A4 portrait with
+    36-point margins. Supported settings are page_size, orientation, and margins.
     """
     try:
-        from reportlab.lib.pagesizes import letter, landscape
+        from reportlab.lib.pagesizes import A3, A4, A5, legal, letter, TABLOID, landscape
         from reportlab.platypus import SimpleDocTemplate
     except ImportError:
         raise ImportError(
@@ -2328,13 +2364,25 @@ def render_pdf(
             "Install it via 'pip install tentags[pdf]' or 'pip install reportlab'."
         )
 
+    settings = _pdf_settings(DEFAULT_PDF_SETTINGS, settings)
+    page_sizes = {
+        "A3": A3,
+        "A4": A4,
+        "A5": A5,
+        "letter": letter,
+        "legal": legal,
+        "tabloid": TABLOID,
+    }
+    base_page_size = page_sizes[settings["page_size"]]
+    actual_page_size = landscape(base_page_size) if settings["orientation"] == "landscape" else base_page_size
+
     doc = SimpleDocTemplate(
         filepath_or_stream,
-        pagesize=landscape(letter) if model.cols > 4 else letter,
-        rightMargin=36,
-        leftMargin=36,
-        topMargin=36,
-        bottomMargin=36
+        pagesize=actual_page_size,
+        leftMargin=settings["margins"][0],
+        rightMargin=settings["margins"][1],
+        topMargin=settings["margins"][2],
+        bottomMargin=settings["margins"][3],
     )
 
     table = _create_pdf_table_object(
@@ -2715,7 +2763,7 @@ def multitable_pdf(
     tables = _prepare_multitable_items(tables, settings)
 
     try:
-        from reportlab.lib.pagesizes import letter, landscape
+        from reportlab.lib.pagesizes import A3, A4, A5, legal, letter, TABLOID, landscape
         from reportlab.platypus import SimpleDocTemplate, PageBreak, Paragraph, Table, TableStyle
         from reportlab.lib.styles import ParagraphStyle
     except ImportError:
@@ -2724,11 +2772,15 @@ def multitable_pdf(
             "Install it via 'pip install tentags[pdf]' or 'pip install reportlab'."
         )
 
-    # Resolve page size
-    base_page_size = letter
-    if str(settings["page_size"]).lower() == "a4":
-        from reportlab.lib.pagesizes import A4
-        base_page_size = A4
+    page_sizes = {
+        "A3": A3,
+        "A4": A4,
+        "A5": A5,
+        "letter": letter,
+        "legal": legal,
+        "tabloid": TABLOID,
+    }
+    base_page_size = page_sizes[settings["page_size"]]
 
     actual_page_size = landscape(base_page_size) if str(settings["orientation"]).lower() == "landscape" else base_page_size
 

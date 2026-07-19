@@ -12,9 +12,9 @@
 
 **TenTags** is a declarative template language and **Intermediate Representation (IR)** for **HTML**, **Excel (`.xlsx`)**, and **PDF** table and document generation.
 
-### 🚀 Current Release: 2.1.9
+### 🚀 Current Release: 2.1.10
 
-**TenTags 2.1.9** writes XLSX text, background, and border colors as opaque ARGB values. Named and HEX colors now render consistently across Excel-compatible applications as well as HTML and PDF.
+**TenTags 2.1.10** adds optional single-table PDF settings and consistent `A3`, `A4`, `A5`, `letter`, `legal`, and `tabloid` page-size support for both single-table and MultiTable PDF output. PDF output defaults to A4 portrait.
 
 ## Install
 
@@ -543,8 +543,8 @@ tentags.render_pdf(model, "Enterprise_Budget_Matrix.pdf")
 ## 🛠️ API Reference
 
 ### Module Constants & Metadata
-- **`tentags.__version__`**: Library version string (e.g., `'2.1.9'`).
-- **`tentags.version_info`**: Version tuple for checking compatibility (e.g., `(2, 1, 7)`).
+- **`tentags.__version__`**: Library version string (e.g., `'2.1.10'`).
+- **`tentags.version_info`**: Version tuple for checking compatibility (e.g., `(2, 1, 10)`).
 - **`tentags.__author__`**: Author name (`'Zhandos Mambetali'`).
 - **`tentags.__license__`**: Project license (`'Apache-2.0'`).
 - **`tentags.__homepage__`**: Link to home website (`'https://tentags.org'`).
@@ -732,8 +732,22 @@ Renders a previously parsed `TableModel` instance into an HTML string.
 ### `tentags.render_xlsx(model: TableModel, filepath_or_stream) -> None`
 Exports a `TableModel` directly to an Excel `.xlsx` file using `openpyxl`. Applies `openpyxl.styles.Font` (bold, italic, color), `openpyxl.styles.PatternFill` (background color), and `openpyxl.styles.Border` according to the table formula. Requires `pip install tentags[excel]`.
 
-### `tentags.render_pdf(model: TableModel, filepath_or_stream) -> None`
-Exports a `TableModel` directly to a vector **PDF** file using `ReportLab`. Translates IR coordinates, selective grid visibility for `cm/rm`, background fills (`BACKGROUND`), fonts, alignments, and borders into native `ReportLab` `TableStyle` commands. Every logical cell retains its content and address. Automatically selects portrait or landscape page orientation based on column count. Requires `pip install tentags[pdf]`.
+### `tentags.render_pdf(model: TableModel, filepath_or_stream, settings=None) -> None`
+Exports a `TableModel` directly to a vector **PDF** file using `ReportLab`. Translates IR coordinates, selective grid visibility for `cm/rm`, background fills (`BACKGROUND`), fonts, alignments, and borders into native `ReportLab` `TableStyle` commands. Every logical cell retains its content and address.
+
+Single-table PDF output defaults to **A4 portrait** with 36-point margins. The optional settings dictionary accepts `page_size` (`"A3"`, `"A4"`, `"A5"`, `"letter"`, `"legal"`, or `"tabloid"`), `orientation` (`"portrait"` or `"landscape"`), and four margins in `(left, right, top, bottom)` order:
+
+```python
+PDF_SETTINGS = {
+    "page_size": "A4",
+    "orientation": "landscape",
+    "margins": (24, 24, 36, 36),
+}
+
+tentags.render_pdf(model, "report.pdf", settings=PDF_SETTINGS)
+```
+
+The defaults are available as `tentags.DEFAULT_PDF_SETTINGS`. Requires `pip install tentags[pdf]`.
 
 ---
 

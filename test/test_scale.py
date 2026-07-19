@@ -1,5 +1,6 @@
 import io
 from pathlib import Path
+import re
 import sys
 
 import pytest
@@ -306,6 +307,103 @@ def test_pdf_stretch_scale_uses_minimum_row_heights():
 
     assert table._rowHeights == [None, None]
     assert table._minRowHeights == [84, 0]
+
+
+def test_single_pdf_defaults_to_a4_portrait_and_accepts_optional_settings(monkeypatch):
+    pytest.importorskip("reportlab")
+    from reportlab.lib.pagesizes import A4, landscape, letter
+
+    model = tentags.parse('1,5,1,"black","solid",0,28,data(A,B,C,D,E)')
+
+    def media_box(pdf_data):
+        match = re.search(
+            rb"/MediaBox\s*\[\s*0\s+0\s+([0-9.]+)\s+([0-9.]+)\s*\]",
+            pdf_data,
+        )
+        assert match is not None
+        return float(match.group(1)), float(match.group(2))
+
+    default_output = io.BytesIO()
+    tentags.render_pdf(model, default_output)
+    assert media_box(default_output.getvalue()) == pytest.approx(A4)
+
+    empty_settings_output = io.BytesIO()
+    tentags.render_pdf(model, empty_settings_output, settings={})
+    assert media_box(empty_settings_output.getvalue()) == pytest.approx(A4)
+
+    assert tentags.DEFAULT_PDF_SETTINGS == {
+        "page_size": "A4",
+        "orientation": "portrait",
+        "margins": (36, 36, 36, 36),
+    }
+
+    captured_widths = []
+    original_create_table = tentags._create_pdf_table_object
+
+    def capture_width(*args, **kwargs):
+        captured_widths.append(kwargs.get("available_width"))
+        return original_create_table(*args, **kwargs)
+
+    monkeypatch.setattr(tentags, "_create_pdf_table_object", capture_width)
+    custom_output = io.BytesIO()
+    tentags.render_pdf(
+        model,
+        custom_output,
+        settings={
+            "page_size": "letter",
+            "orientation": "landscape",
+            "margins": (10, 20, 30, 40),
+        },
+    )
+
+    assert media_box(custom_output.getvalue()) == pytest.approx(landscape(letter))
+    assert captured_widths[-1] == pytest.approx(landscape(letter)[0] - 10 - 20)
+
+
+@pytest.mark.parametrize("name", ["A3", "A4", "A5", "letter", "legal", "tabloid"])
+def test_single_and_multitable_pdf_support_common_page_sizes(name):
+    pytest.importorskip("reportlab")
+    from reportlab.lib import pagesizes
+
+    model = tentags.parse('1,1,1,"black","solid",0,28,data(A)')
+
+    def media_box(pdf_data):
+        match = re.search(
+            rb"/MediaBox\s*\[\s*0\s+0\s+([0-9.]+)\s+([0-9.]+)\s*\]",
+            pdf_data,
+        )
+        assert match is not None
+        return float(match.group(1)), float(match.group(2))
+
+    expected = pagesizes.TABLOID if name == "tabloid" else getattr(pagesizes, name)
+    single_output = io.BytesIO()
+    tentags.render_pdf(model, single_output, settings={"page_size": name})
+    assert media_box(single_output.getvalue()) == pytest.approx(expected)
+
+    multitable_output = io.BytesIO()
+    tentags.multitable_pdf(
+        [model],
+        multitable_output,
+        settings={"page_size": name},
+    )
+    assert media_box(multitable_output.getvalue()) == pytest.approx(expected)
+
+
+@pytest.mark.parametrize(
+    "settings,match",
+    [
+        ({"page_size": "B4"}, "page_size"),
+        ({"orientation": "auto"}, "orientation"),
+        ({"margins": (1, 2, 3)}, "margins"),
+        ({"margins": (1, 2, -3, 4)}, "margins"),
+    ],
+)
+def test_single_pdf_rejects_invalid_settings(settings, match):
+    pytest.importorskip("reportlab")
+    model = tentags.parse('1,1,1,"black","solid",0,28,data(A)')
+
+    with pytest.raises(ValueError, match=match):
+        tentags.render_pdf(model, io.BytesIO(), settings=settings)
 
 
 def test_pdf_supports_named_background_and_text_colors():

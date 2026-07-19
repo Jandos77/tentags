@@ -8,6 +8,19 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.1.10] - 2026-07-19
+
+### Added
+- Added optional `settings` to single-table `render_pdf()` with `page_size`, `orientation`, and `(left, right, top, bottom)` margins.
+- Added `A3`, `A4`, `A5`, `letter`, `legal`, and `tabloid` page sizes to both single-table and MultiTable PDF rendering.
+- Added public `DEFAULT_PDF_SETTINGS`; omitted or empty settings produce A4 portrait output with 36-point margins.
+
+### Testing
+- Added real PDF MediaBox checks for every supported page size in both portrait-capable single-table and MultiTable rendering paths.
+- Added validation coverage for invalid page sizes, orientations, and margins.
+
+---
+
 ## [2.1.9] - 2026-07-18
 
 ### Fixed
@@ -142,14 +155,14 @@ Serializer API, Addressing Model, and Multitable Layout.
   `_Union[str, _Any]`. Fixed to be consistent with all other type annotations in the file.
 
 > **Removed from PyPI** due to a defect discovered after publication.
-> Use the latest stable **2.1.9** release instead.
+> Use the latest stable **2.1.10** release instead.
 
 ---
 
 ## [2.0.0] - yanked
 
 > **Removed from PyPI** due to `NameError: Union is not defined` on Python 3.13+ at import.  
-> Use the latest stable **2.1.9** release instead.
+> Use the latest stable **2.1.10** release instead.
 
 ### Added (carried into 2.0.2 and later)
 - `<u>` tag — underline text (HTML inline CSS, XLSX `Font(underline="single")`, PDF `UNDERLINE`)
@@ -170,7 +183,7 @@ Serializer API, Addressing Model, and Multitable Layout.
 ## [1.1.4] - yanked
 
 > **Removed from PyPI** — contained the same `NameError: Union is not defined` bug on Python 3.13+.
-> Use the latest stable **2.1.9** release instead.
+> Use the latest stable **2.1.10** release instead.
 
 ---
 
