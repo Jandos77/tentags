@@ -62,17 +62,17 @@ Website: https://tentags.org
 Documentation: https://tentags.org/docs
 GitHub: https://github.com/Jandos77/tentags
 
-Current Version: 2.1.11
+Current Version: 2.1.12
 License: Apache License 2.0
 """
 
-__version__ = "2.1.11"
+__version__ = "2.1.12"
 __author__ = "Zhandos Mambetali"
 __license__ = "Apache-2.0"
 __copyright__ = "Copyright (c) 2026 Zhandos Mambetali"
 __homepage__ = "https://tentags.org"
 __url__ = "https://tentags.org"
-version_info = (2, 1, 11)
+version_info = (2, 1, 12)
 
 __all__ = [
     "__version__",
@@ -2174,7 +2174,7 @@ def _create_pdf_table_object(
         except Exception:
             return default
 
-    def pdf_image(attrs: dict, forced_height: float = None):
+    def pdf_image(attrs: dict):
         src = str(attrs.get("src", ""))
         if not src:
             return None
@@ -2187,12 +2187,9 @@ def _create_pdf_table_object(
             original_height = float(image.imageHeight or image.drawHeight or 0)
             width = attrs.get("w")
             height = attrs.get("h")
+            margin = float(attrs.get("m") or 0)
 
-            if forced_height is not None:
-                image.drawHeight = forced_height
-                if original_height:
-                    image.drawWidth = original_width * forced_height / original_height
-            elif width and width != "auto" and height and height != "auto":
+            if width and width != "auto" and height and height != "auto":
                 image.drawWidth = float(width)
                 image.drawHeight = float(height)
             elif width and width != "auto":
@@ -2204,13 +2201,13 @@ def _create_pdf_table_object(
                 if original_height:
                     image.drawWidth = original_width * image.drawHeight / original_height
 
-            margin = float(attrs.get("m") or 0)
             if margin <= 0:
                 return image
+            image_height_with_margin = image.drawHeight + 2 * margin
             return Table(
                 [[image]],
                 colWidths=[image.drawWidth + 2 * margin],
-                rowHeights=[image.drawHeight + 2 * margin],
+                rowHeights=[image_height_with_margin],
                 style=TableStyle([
                     ("LEFTPADDING", (0, 0), (-1, -1), margin),
                     ("RIGHTPADDING", (0, 0), (-1, -1), margin),
@@ -2372,13 +2369,19 @@ def _create_pdf_table_object(
                     cell_text = f'<link href="{href_pdf}">{cell_text}</link>'
                 content.append(Paragraph(cell_text, p_style))
 
-            forced_height = model.cell_height * model.row_scales.get(r, 1) if model.stretch == 0 else None
             rendered_images = [
                 rendered
                 for image_attrs in images
-                if (rendered := pdf_image(image_attrs, forced_height=forced_height)) is not None
+                if (rendered := pdf_image(image_attrs)) is not None
             ]
             if rendered_images:
+                if model.stretch == 0 and val == '':
+                    table_styles.extend([
+                        ('LEFTPADDING', (c, r), (c, r), 0),
+                        ('RIGHTPADDING', (c, r), (c, r), 0),
+                        ('TOPPADDING', (c, r), (c, r), 0),
+                        ('BOTTOMPADDING', (c, r), (c, r), 0),
+                    ])
                 if val == '':
                     anchors = [f'<a name="{_html_cell_id(r, c, current_target.pdf_prefix)}"/>']
                     if mark:
@@ -2386,8 +2389,8 @@ def _create_pdf_table_object(
                     anchor_style = ParagraphStyle(
                         f'ImageAnchor_{r}_{c}',
                         fontName=font_name,
-                        fontSize=1,
-                        leading=1,
+                        fontSize=0.1,
+                        leading=0,
                     )
                     content.append(Paragraph("".join(anchors) + "&#8203;", anchor_style))
                 content.extend(rendered_images)

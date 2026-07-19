@@ -279,10 +279,11 @@ tentags.render(
 
 Size rules:
 - `w` and `h` are pixels by default.
+- `w` and `m` are independent values for each image; example values such as `120` and `15` are not library constants.
 - `h=auto` preserves proportions.
 - `m` is margin in pixels on all four sides.
 - If the sixth preamble argument (`stretch`) is `1`, image cells can expand with the rendered image size.
-- If `stretch` is `0`, image height is forced to the seventh preamble argument (`cell_height`) and width becomes `auto`.
+- In PDF with `stretch=0`, the row remains fixed at the seventh preamble argument (`cell_height`, including vertical scale), while the `<img>` dimensions remain unchanged. `h=auto` stays automatic from the source proportions and `w`; `m` is applied separately and does not resize the image or expand the fixed row.
 - In `stretch=1` mode, if only `w` is provided, height is automatic.
 - In `stretch=1` mode, if only `h` is provided, width is automatic.
 - In `stretch=1` mode, if both are numbers, the image is rendered at exactly that size.
@@ -1131,7 +1132,7 @@ style    = '''style(
 
 entries = [
     ('<url=https://github.com/tentags>GitHub Repository</url>', 'Open Source', '<color=green>Active</color>'),
-    ('<url=https://pypi.org/project/tentags>PyPI Package</url>', 'v2.1.11',    '<u>Stable</u>'),
+    ('<url=https://pypi.org/project/tentags>PyPI Package</url>', 'v2.1.12',    '<u>Stable</u>'),
     ('<url=https://tentags.readthedocs.io>Documentation</url>',  'Read the Docs', '<color=blue>Online</color>'),
 ]
 rows = '; '.join(f'{link}, {badge}, {status}' for link, badge, status in entries)

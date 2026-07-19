@@ -65,7 +65,7 @@ Public API stability:
 - Preserve old behavior unless the user explicitly asks for a breaking change.
 
 Current version:
-TenTags is currently 2.1.11. Do not change version metadata unless explicitly asked.
+TenTags is currently 2.1.12. Do not change version metadata unless explicitly asked.
 
 Bundled prompt API:
 - The installed library exposes this bootstrap prompt through `tentags.get_prompt()`.
@@ -504,13 +504,14 @@ Single tag syntax:
 
 Image rules:
 - w and h are pixels by default.
+- w is a per-image numeric value, not a fixed library constant; values such as w=60, w=120, and w=300 must all be passed through to every renderer.
 - h=auto keeps proportions.
 - only w means auto height.
 - only h means auto width.
 - both numeric means exact dimensions.
 - m is margin in pixels on all sides.
 - If preamble stretch, the sixth arg, is 1, a cell with img expands with the image.
-- If stretch is 0, force image h to the seventh preamble arg cell_height and w=auto.
+- In PDF, if stretch is 0, the row height remains fixed at the seventh preamble arg cell_height (including vertical scale), but the renderer must preserve the img dimensions. In `<img w=120 h=auto m=15>`, both 120 and 15 are only example values: use the actual w and m supplied for that image. h remains automatic from the source proportions and w; m is applied separately and must never be subtracted from h or used to expand the fixed row.
 - Local paths and HTTP(S) image sources are embedded in PDF and XLSX output.
 - Remote images are limited to 20 MB.
 - XLSX images use openpyxl's standard drawing anchor over the worksheet grid; do not claim native Excel "Place in Cell" behavior.

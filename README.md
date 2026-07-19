@@ -12,9 +12,9 @@
 
 **TenTags** is a declarative template language and **Intermediate Representation (IR)** for **HTML**, **Excel (`.xlsx`)**, and **PDF** table and document generation.
 
-### 🚀 Current Release: 2.1.11
+### 🚀 Current Release: 2.1.12
 
-**TenTags 2.1.11** embeds local and remote HTTP(S) `<img>` sources in PDF and XLSX output. PDF image rendering now honors `w`, `h=auto`, and `m`; XLSX continues to use the standard openpyxl drawing anchor.
+**TenTags 2.1.12** fixes PDF image margin behavior. Every `<img>` now keeps its own variable `w`, derives `h=auto` from the source proportions, and applies its own variable `m` independently; fixed-height PDF rows remain fixed.
 
 ## Install
 
@@ -261,12 +261,14 @@ Tags can be used in `style(...)` and `data(...)`. In `style(...)`, tags usually 
 | `<url=...>...</url>` | Link or navigation target. | `<url=https://tentags.org>Site</url>` |
 | `<mark=...>` | Single tag that marks the current cell. | `<mark=Summary><b>Total</b>` |
 | `<url=goto:...>...</url>` | Navigates to a marked cell or address. | `<url=goto:Summary>Go to total</url>` |
-| `<img src=... w=... h=... m=...>` | Single image tag. `w`, `h`, and `m` are pixels; `m` means margin on all sides. `h=auto` keeps proportions. | `<img src=logo.png w=120 h=auto m=15>` |
+| `<img src=... w=... h=... m=...>` | Single image tag. `w`, `h`, and `m` are per-image pixel values; `m` means margin on all sides. `h=auto` calculates height from the supplied `w` and source proportions. | `<img src=logo.png w=120 h=auto m=15>` |
 | `<value=...>` | Insert value from a local cell or mark. | `<value=B2>` |
 
 Single tags such as `<mark=...>`, `<img ...>`, and `<value=...>` are not closed.
 
 Local paths and HTTP(S) image sources are embedded in PDF and XLSX output. Remote images are limited to 20 MB. XLSX images use openpyxl's standard drawing anchor over the worksheet grid.
+
+For PDF output with `stretch=0`, the row keeps its fixed `cell_height`, while the `<img>` dimensions remain independent. Values such as `w=120` and `m=15` are examples, not constants: PDF uses the actual `w` and `m` of each image. With `h=auto`, height is calculated from that image's `w` and source proportions; `m` is applied separately and neither resizes the image nor expands the fixed PDF row.
 
 ---
 
@@ -545,8 +547,8 @@ tentags.render_pdf(model, "Enterprise_Budget_Matrix.pdf")
 ## 🛠️ API Reference
 
 ### Module Constants & Metadata
-- **`tentags.__version__`**: Library version string (e.g., `'2.1.11'`).
-- **`tentags.version_info`**: Version tuple for checking compatibility (e.g., `(2, 1, 11)`).
+- **`tentags.__version__`**: Library version string (e.g., `'2.1.12'`).
+- **`tentags.version_info`**: Version tuple for checking compatibility (e.g., `(2, 1, 12)`).
 - **`tentags.__author__`**: Author name (`'Zhandos Mambetali'`).
 - **`tentags.__license__`**: Project license (`'Apache-2.0'`).
 - **`tentags.__homepage__`**: Link to home website (`'https://tentags.org'`).
