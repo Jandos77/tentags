@@ -42,6 +42,7 @@ def build_merge_content_artifacts():
 def test_cm_rm_preserve_all_cell_values_in_html_xlsx_and_pdf():
     openpyxl = pytest.importorskip("openpyxl")
     pytest.importorskip("reportlab")
+    from reportlab.lib import colors
 
     model, html_output, xlsx_output, pdf_output = build_merge_content_artifacts()
     expected = [["A", "B", "C"], ["D", "E", "F"], ["G", "H", "I"]]
@@ -49,6 +50,7 @@ def test_cm_rm_preserve_all_cell_values_in_html_xlsx_and_pdf():
     html = html_output.read_text(encoding="utf-8")
     for value in "ABCDEFGHI":
         assert f">{value}</td>" in html
+    assert html.count("color:white;") >= 3
 
     workbook = openpyxl.load_workbook(xlsx_output)
     sheet = workbook["Table"]
@@ -57,6 +59,7 @@ def test_cm_rm_preserve_all_cell_values_in_html_xlsx_and_pdf():
         for row in range(1, 4)
     ]
     assert actual_xlsx == expected
+    assert [sheet.cell(1, col).font.color.rgb.lower() for col in range(1, 4)] == ["ffffffff"] * 3
     assert list(sheet.merged_cells.ranges) == []
     assert sheet["A1"].border.right.style is None
     assert sheet["B1"].border.left.style is None
@@ -71,6 +74,7 @@ def test_cm_rm_preserve_all_cell_values_in_html_xlsx_and_pdf():
         for row in pdf_table._cellvalues
     ]
     assert actual_pdf == expected
+    assert [cell.style.textColor for cell in pdf_table._cellvalues[0]] == [colors.white] * 3
     assert pdf_table._spanCmds == []
     assert not any(
         command[0] == "LINEBEFORE" and command[1] in ((1, 0), (2, 0))

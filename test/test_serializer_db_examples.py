@@ -2,6 +2,8 @@ from pathlib import Path
 import sqlite3
 import sys
 
+import pytest
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
@@ -304,11 +306,28 @@ def build_multitable_db_report(output_dir: Path) -> tuple[Path, Path, Path]:
 
 
 def test_serializer_single_table_from_sqlite_db(tmp_path):
+    openpyxl = pytest.importorskip("openpyxl")
+    from reportlab.lib import colors
+
     html_output, pdf_output, xlsx_output = build_single_db_report(tmp_path)
 
     html = html_output.read_text(encoding="utf-8")
     assert "January" in html
     assert "#dcfce7" in html
+    assert "color:#ffffff;" in html
+    assert "color:#16a34a;" in html
+    assert "color:#166534;" in html
+
+    sheet = openpyxl.load_workbook(xlsx_output)["Table"]
+    assert sheet["A1"].font.color.rgb.lower() == "ffffffff"
+    assert sheet["D2"].font.color.rgb.lower() == "ff16a34a"
+    assert sheet["E2"].font.color.rgb.lower() == "ff166534"
+
+    model = _financial_model_from_db(tmp_path / "serializer_db_example.sqlite")
+    pdf_table = tentags._create_pdf_table_object(model)
+    assert pdf_table._cellvalues[0][0].style.textColor == colors.white
+    assert pdf_table._cellvalues[1][3].style.textColor == colors.HexColor("#16a34a")
+    assert pdf_table._cellvalues[1][4].style.textColor == colors.HexColor("#166534")
     assert pdf_output.read_bytes().startswith(b"%PDF")
     assert xlsx_output.stat().st_size > 1000
 

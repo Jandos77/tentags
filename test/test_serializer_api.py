@@ -68,6 +68,9 @@ def test_dumps_style_serializes_matrix():
 
 
 def test_serializer_api_roundtrips_through_compile_and_renderers():
+    openpyxl = pytest.importorskip("openpyxl")
+    from reportlab.lib import colors
+
     rows = [
         {"period": "January", "revenue": 125000, "status": "Closed"},
         {"period": "July", "revenue": 158900, "status": "Review"},
@@ -110,8 +113,25 @@ def test_serializer_api_roundtrips_through_compile_and_renderers():
 
     assert model.rows == 3
     assert model.cols == 3
+    assert model.cells[0][0].styles["color"] == "#ffffff"
+    assert model.cells[1][2].styles["color"] == "#166534"
+    assert model.cells[2][2].styles["color"] == "#92400e"
     assert "#dcfce7" in html
     assert "#fef3c7" in html
+    assert "color:#ffffff;" in html
+    assert "color:#166534;" in html
+    assert "color:#92400e;" in html
+
+    xlsx.seek(0)
+    sheet = openpyxl.load_workbook(xlsx)["Table"]
+    assert sheet["A1"].font.color.rgb.lower() == "ffffffff"
+    assert sheet["C2"].font.color.rgb.lower() == "ff166534"
+    assert sheet["C3"].font.color.rgb.lower() == "ff92400e"
+
+    pdf_table = tentags._create_pdf_table_object(model)
+    assert pdf_table._cellvalues[0][0].style.textColor == colors.white
+    assert pdf_table._cellvalues[1][2].style.textColor == colors.HexColor("#166534")
+    assert pdf_table._cellvalues[2][2].style.textColor == colors.HexColor("#92400e")
     assert pdf.getvalue().startswith(b"%PDF")
     assert len(xlsx.getvalue()) > 1000
 

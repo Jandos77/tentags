@@ -47,6 +47,8 @@ def test_django_block_tag():
     assert "Hello Django" in html
     assert "<table" in html
     assert "&lt;" not in html
+    assert "background-color:yellow;" in html
+    assert "color:blue;" in html
 
 
 @pytest.mark.skipif(not HAS_DJANGO, reason="Django is not installed")

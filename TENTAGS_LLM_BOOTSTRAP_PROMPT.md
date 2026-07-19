@@ -788,13 +788,20 @@ tentags.multitable_pdf(tables, settings=PDF_SETTINGS)
 
 Current important tests:
 - test/test_addressing.py
-- test/test_mark_goto.py
-- test/test_value_refs.py
-- test/test_html_goto_links.py
-- test/test_xlsx_goto_links.py
-- test/test_pdf_goto_links.py
+- test/test_all_tags.py
+- test/test_border_styles.py
+- test/test_django.py
 - test/test_external_address_resolver.py
+- test/test_html.py
+- test/test_jinja.py
+- test/test_mark_goto.py
+- test/test_merge_content_preservation.py
+- test/test_metadata_features.py
 - test/test_multitable_addressing.py
+- test/test_scale.py
+- test/test_serializer_api.py
+- test/test_serializer_db_examples.py
+- test/test_value_refs.py
 
 Main multitable tests in test/test_multitable_addressing.py:
 - test_multitable_has_multiple_separate_tables_in_html
@@ -808,11 +815,6 @@ Main multitable tests in test/test_multitable_addressing.py:
 - test_multitable_pdf_format_settings_are_preserved
 
 Direct file generation:
-
-python test/test_pdf_goto_links.py
-
-Creates:
-<PROJECT_ROOT>\demo_output\one_column_goto_links.pdf
 
 python test/test_external_address_resolver.py
 

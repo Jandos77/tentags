@@ -4,10 +4,6 @@ import sys
 
 import pytest
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
-
 import tentags
 from demo_paths import demo_output_path
 
@@ -28,7 +24,7 @@ BORDER_CASES = [
 def _formula(border_style):
     return (
         f'3,3,2,"#334155","{border_style}",0,32,'
-        'style(<bg=#dbeafe><b>, , </b></bg>; <bg=white>, , </bg>; <bg=#f8fafc>, , </bg>),'
+        'style(<bg=#dbeafe><color=red><b>, , </b></bg>; <bg=white>, , </bg>; <bg=#f8fafc>, , </color></bg>),'
         'data(<cm>A, B, C</cm>; <rm>D</rm>, E, F; <rm>G</rm>, H, I)'
     )
 
@@ -41,7 +37,7 @@ def _tables():
             "sheet_name": name,
             "title": f"{name} borders",
             "preamble": f'3,3,2,"#334155","{border_style}",0,32',
-            "style": "style(<bg=#dbeafe><b>, , </b></bg>; <bg=white>, , </bg>; <bg=#f8fafc>, , </bg>)",
+            "style": "style(<color=blue><bg=#dbeafe><b>, , </b></bg>; <bg=white>, , </bg>; <bg=#f8fafc>, , </color></bg>)",
             "data": "data(<cm>A, B, C</cm>; <rm>D</rm>, E, F; <rm>G</rm>, H, I)",
         }
         for name, border_style, _, _, _ in BORDER_CASES

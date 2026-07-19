@@ -13,14 +13,14 @@ from demo_paths import demo_output_path
 
 
 SCALE_DEMO_PREAMBLE = (
-    '5,4,1,"#64748b","dashed-1",0,28,'
+    '5,4,1,"#1977ff","dashed-1",0,28,'
     'scale(A1=2,3;C5=2,2;D3=3,5)'
 )
 
 SCALE_DEMO_STYLE = """style(
-<cm><center><bg=blue><color=white><b>, , , </b></color></bg></cm>;
-<bg=white>, , , </bg>;
-<bg=#f8fafc>, , , </bg>;
+<cm><center><bg=blue><color=green><b>, , , </b></color></bg></cm>;
+<color=blue><bg=white><i>, , , </i></bg></color>;
+<color=yellow><bg=#f8fafc>, , , </bg></color>;
 <bg=white>, , , </bg>;
 <bg=yellow>, , , </bg></center>
 )"""

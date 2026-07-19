@@ -141,12 +141,20 @@ def test_multitable_each_sheet_has_own_preamble_style_and_data():
     assert "background-color:#ffedd5;" in html
     assert "background-color:#dcfce7;" in html
     assert "background-color:#f3e8ff;" in html
+    assert "color:#1e3a8a;" in html
+    assert "color:#7c2d12;" in html
+    assert "color:#166534;" in html
+    assert "color:#581c87;" in html
 
     wb = openpyxl.load_workbook(xlsx_output)
-    assert wb["Links"]["A1"].fill.start_color.rgb.lower().endswith("dbeafe")
-    assert wb["Items"]["A1"].fill.start_color.rgb.lower().endswith("ffedd5")
-    assert wb["Sales"]["A1"].fill.start_color.rgb.lower().endswith("dcfce7")
-    assert wb["Customers"]["A1"].fill.start_color.rgb.lower().endswith("f3e8ff")
+    assert wb["Links"]["A1"].fill.start_color.rgb.lower() == "ffdbeafe"
+    assert wb["Items"]["A1"].fill.start_color.rgb.lower() == "ffffedd5"
+    assert wb["Sales"]["A1"].fill.start_color.rgb.lower() == "ffdcfce7"
+    assert wb["Customers"]["A1"].fill.start_color.rgb.lower() == "fff3e8ff"
+    assert wb["Links"]["A1"].font.color.rgb.lower() == "ff1e3a8a"
+    assert wb["Items"]["A1"].font.color.rgb.lower() == "ff7c2d12"
+    assert wb["Sales"]["A1"].font.color.rgb.lower() == "ff166534"
+    assert wb["Customers"]["A1"].font.color.rgb.lower() == "ff581c87"
 
 
 def test_multitable_uses_table_list_names_not_logical_sheet_keys():
