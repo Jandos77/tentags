@@ -637,7 +637,7 @@ tentags.multitable_xlsx(
 tentags.multitable_pdf(
     tables,
     filepath=None,
-    page_size="letter" or "A4",
+    page_size="A4",  # A3 | A4 | A5 | letter | legal | tabloid
     orientation="portrait" or "landscape",
     page_break_after_each=True,
     margins=(36, 36, 36, 36),

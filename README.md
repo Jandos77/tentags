@@ -885,7 +885,7 @@ Assembles and renders multiple tables into a single PDF document.
 - **`settings["tables_per_row"]`**: Positive integer or `'auto'`. Auto computes how many tables fit across the page width.
 - **`settings["tables_per_page"]`**: Positive integer or `'auto'`. Auto computes how many table blocks fit in page height.
 - **`settings["gap"]`**: Spacing between table blocks in points.
-- **`settings["page_size"]`**: `'letter'` or `'A4'`.
+- **`settings["page_size"]`**: `'A3'`, `'A4'`, `'A5'`, `'letter'`, `'legal'`, or `'tabloid'`.
 - **`settings["orientation"]`**: `'portrait'` or `'landscape'`.
 - **`settings["margins"]`**: `(left, right, top, bottom)` in points.
 - **`settings["page_break_after_each"]`**: Legacy/simple-flow page break flag when no multi-column layout is used.
