@@ -104,10 +104,14 @@ def test_border_styles_are_preserved_in_html_xlsx_and_pdf(
     tentags.render_xlsx(model, xlsx)
     xlsx.seek(0)
     sheet = openpyxl.load_workbook(xlsx).active
-    assert [sheet.cell(1, col).value for col in range(1, 4)] == ["A", "B", "C"]
-    assert [sheet.cell(2, col).value for col in range(1, 4)] == ["D", "E", "F"]
-    assert [sheet.cell(3, col).value for col in range(1, 4)] == ["G", "H", "I"]
-    assert list(sheet.merged_cells.ranges) == []
+    assert sheet.cell(1, 1).value == "A"
+    assert sheet.cell(2, 2).value == "E"
+    assert sheet.cell(2, 3).value == "F"
+    assert sheet.cell(3, 2).value == "H"
+    assert sheet.cell(3, 3).value == "I"
+    merged_str_ranges = [str(r) for r in sheet.merged_cells.ranges]
+    assert "A1:C1" in merged_str_ranges
+    assert "A2:A3" in merged_str_ranges
 
     if mode == "none":
         for row in sheet.iter_rows(min_row=1, max_row=3, min_col=1, max_col=3):

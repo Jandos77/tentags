@@ -62,17 +62,17 @@ Website: https://tentags.org
 Documentation: https://tentags.org/docs
 GitHub: https://github.com/Jandos77/tentags
 
-Current Version: 2.1.14
+Current Version: 2.1.15
 License: Apache License 2.0
 """
 
-__version__ = "2.1.14"
+__version__ = "2.1.15"
 __author__ = "Zhandos Mambetali"
 __license__ = "Apache-2.0"
 __copyright__ = "Copyright (c) 2026 Zhandos Mambetali"
 __homepage__ = "https://tentags.org"
 __url__ = "https://tentags.org"
-version_info = (2, 1, 14)
+version_info = (2, 1, 15)
 
 __all__ = [
     "__version__",
@@ -450,6 +450,10 @@ class CellDesc:
         self.mark = None
         self.value_refs = []
         self.styles = {}  # Extensible styles, e.g. {'font-weight': 'bold', 'color': '#ff0000'}
+        self.colspan = 1
+        self.rowspan = 1
+        self.is_covered = False
+
 
 def _is_self_tag(tag_name: str) -> bool:
     return tag_name.lower() in ('img', 'mark', 'value')
@@ -1515,8 +1519,17 @@ def _parse_data_arg(content: str, context: dict = None):
         if len(last_row) == 1 and is_plain_empty_cell(last_row[0]):
             cells_grid.pop()
 
-    # Apply Column Merge borders
-    for row in cells_grid:
+    return _resolve_merged_cell_spans(cells_grid)
+
+def _resolve_merged_cell_spans(cells_grid: list[list[CellDesc]]) -> list[list[CellDesc]]:
+    num_rows = len(cells_grid)
+    if num_rows == 0:
+        return cells_grid
+    max_cols = max(len(row) for row in cells_grid) if cells_grid else 0
+
+    # 1. Apply Column Merge spans and borders
+    for r in range(num_rows):
+        row = cells_grid[r]
         i = 0
         n = len(row)
         while i < n:
@@ -1530,22 +1543,20 @@ def _parse_data_arg(content: str, context: dict = None):
             end_idx = i - 1
 
             if start_idx < end_idx:
+                row[start_idx].colspan = end_idx - start_idx + 1
                 row[start_idx].border_flags |= BorderFlags.HIDE_RIGHT
-                for mid in range(start_idx + 1, end_idx):
-                    row[mid].border_flags |= (BorderFlags.HIDE_LEFT | BorderFlags.HIDE_RIGHT)
-                row[end_idx].border_flags |= BorderFlags.HIDE_LEFT
+                for mid in range(start_idx + 1, end_idx + 1):
+                    row[mid].is_covered = True
+                    if mid < end_idx:
+                        row[mid].border_flags |= (BorderFlags.HIDE_LEFT | BorderFlags.HIDE_RIGHT)
+                    else:
+                        row[mid].border_flags |= BorderFlags.HIDE_LEFT
 
-    # Apply Row Merge borders
-    max_cols = max(len(row) for row in cells_grid) if cells_grid else 0
-    num_rows = len(cells_grid)
+    # 2. Apply Row Merge spans and borders
     for c in range(max_cols):
         r = 0
         while r < num_rows:
-            if c >= len(cells_grid[r]):
-                r += 1
-                continue
-
-            if cells_grid[r][c].rm_block_id is None:
+            if c >= len(cells_grid[r]) or cells_grid[r][c].rm_block_id is None:
                 r += 1
                 continue
 
@@ -1555,10 +1566,32 @@ def _parse_data_arg(content: str, context: dict = None):
             end_row = r - 1
 
             if start_row < end_row:
+                cells_grid[start_row][c].rowspan = end_row - start_row + 1
                 cells_grid[start_row][c].border_flags |= BorderFlags.HIDE_BOTTOM
-                for mid in range(start_row + 1, end_row):
-                    cells_grid[mid][c].border_flags |= (BorderFlags.HIDE_TOP | BorderFlags.HIDE_BOTTOM)
-                cells_grid[end_row][c].border_flags |= BorderFlags.HIDE_TOP
+                for mid in range(start_row + 1, end_row + 1):
+                    cells_grid[mid][c].is_covered = True
+                    if mid < end_row:
+                        cells_grid[mid][c].border_flags |= (BorderFlags.HIDE_TOP | BorderFlags.HIDE_BOTTOM)
+                    else:
+                        cells_grid[mid][c].border_flags |= BorderFlags.HIDE_TOP
+
+    # 3. Mark covered cells in rectangular merged areas (master cell keeps span)
+    for r in range(num_rows):
+        row_len = len(cells_grid[r])
+        for c in range(row_len):
+            cell = cells_grid[r][c]
+            if cell.colspan > 1 or cell.rowspan > 1:
+                if c + cell.colspan > row_len:
+                    cell.colspan = max(1, row_len - c)
+                if r + cell.rowspan > num_rows:
+                    cell.rowspan = max(1, num_rows - r)
+                for dr in range(cell.rowspan):
+                    for dc in range(cell.colspan):
+                        if dr == 0 and dc == 0:
+                            continue
+                        tr, tc = r + dr, c + dc
+                        if tr < num_rows and tc < len(cells_grid[tr]):
+                            cells_grid[tr][tc].is_covered = True
 
     return cells_grid
 
@@ -1688,7 +1721,7 @@ def _overlay_style_and_data(style_grid: list[list[CellDesc]], data_grid: list[li
 
             row_cells.append(merged_cell)
         cells_grid.append(row_cells)
-    return cells_grid
+    return _resolve_merged_cell_spans(cells_grid)
 
 def parse(formula_args: str, context: dict = None) -> TableModel:
     """
@@ -1846,6 +1879,8 @@ def render_html(
 
             if r < len(model.cells) and c < len(model.cells[r]):
                 cell = model.cells[r][c]
+                if cell.is_covered:
+                    continue
                 val = cell.raw_expr
                 if val == 'None':
                     val = ''
@@ -1897,7 +1932,9 @@ def render_html(
                 safe_href = _html.escape(str(href), quote=True)
                 content = f'<a href="{safe_href}" style="color:inherit;text-decoration:inherit;">{content}</a>'
 
-            html.append(f'<td id="{_html_cell_id(r, c, current_target.html_prefix)}" style="{td_style}">{content}</td>')
+            colspan_attr = f' colspan="{cell.colspan}"' if cell and cell.colspan > 1 else ''
+            rowspan_attr = f' rowspan="{cell.rowspan}"' if cell and cell.rowspan > 1 else ''
+            html.append(f'<td id="{_html_cell_id(r, c, current_target.html_prefix)}"{colspan_attr}{rowspan_attr} style="{td_style}">{content}</td>')
         html.append('</tr>')
 
     html.append('</table>')
@@ -1977,6 +2014,7 @@ def _write_model_to_sheet(
             current_width = ws.column_dimensions[column_name].width
             ws.column_dimensions[column_name].width = max(current_width or 0, desired_width)
     
+    merged_ranges_to_apply = []
     # Write values, borders, alignments, and heights
     for r in range(model.rows):
         row_scale = model.row_scales.get(r, 1)
@@ -1999,6 +2037,16 @@ def _write_model_to_sheet(
                 cell_styles = cell.styles
                 images = cell.images
                 link = cell.link
+                if not cell.is_covered:
+                    max_c = min(c + cell.colspan - 1, model.cols - 1)
+                    max_r = min(r + cell.rowspan - 1, model.rows - 1)
+                    if max_c > c or max_r > r:
+                        merged_ranges_to_apply.append((
+                            start_row + r,
+                            c + 1,
+                            start_row + max_r,
+                            max_c + 1,
+                        ))
             cell_ref.value = val or (images[0].get('src', '') if images else '')
 
             if images:
@@ -2122,6 +2170,14 @@ def _write_model_to_sheet(
                         underline='single',
                         color='0563C1'  # Excel default hyperlink blue
                     )
+
+    for start_r, start_c, end_r, end_c in merged_ranges_to_apply:
+        ws.merge_cells(
+            start_row=start_r,
+            start_column=start_c,
+            end_row=end_r,
+            end_column=end_c,
+        )
 
 def render_xlsx(
     model: TableModel,
@@ -2308,6 +2364,10 @@ def _create_pdf_table_object(
                 images = cell.images
                 link = cell.link
                 mark = cell.mark
+                max_c = min(c + cell.colspan - 1, model.cols - 1)
+                max_r = min(r + cell.rowspan - 1, model.rows - 1)
+                if max_c > c or max_r > r:
+                    table_styles.append(('SPAN', (c, r), (max_c, max_r)))
             # Background fill
             if 'background-color' in cell_styles:
                 bg_c = to_rl_color(cell_styles['background-color'])

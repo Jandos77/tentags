@@ -8,6 +8,19 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.1.15] - 2026-07-22
+
+### Added
+- Native cell merging (Hybrid Architecture) for `<cm>` (Column Merge) and `<rm>` (Row Merge) tags across HTML, Excel (.xlsx), and PDF formats.
+- Native `<td colspan="N" rowspan="M">` rendering in HTML output.
+- Native `ws.merge_cells(...)` range merging in OpenPyXL Excel output.
+- Native ReportLab `SPAN` table styles in PDF output.
+
+### Documentation
+- Updated release version and native cell merging documentation.
+
+---
+
 ## [2.1.14] - 2026-07-19
 
 ### Fixed

@@ -12,9 +12,9 @@
 
 **TenTags** is a declarative template language and **Intermediate Representation (IR)** for **HTML**, **Excel (`.xlsx`)**, and **PDF** table and document generation.
 
-### 🚀 Current Release: 2.1.14
+### 🚀 Current Release: 2.1.15
 
-**TenTags 2.1.14** makes images wrapped in `<url>` clickable in PDF output. External URLs create native PDF URI links, while `goto:` targets create internal PDF navigation links; the clickable area includes the image and its margin.
+**TenTags 2.1.15** introduces native cell merging (Hybrid Architecture) for `<cm>` (Column Merge) and `<rm>` (Row Merge) tags across HTML (`<td colspan="N" rowspan="M">`), Excel (`ws.merge_cells(...)`), and PDF (ReportLab `SPAN`).
 
 ## Install
 
@@ -559,8 +559,8 @@ tentags.render_pdf(model, "Enterprise_Budget_Matrix.pdf")
 ## 🛠️ API Reference
 
 ### Module Constants & Metadata
-- **`tentags.__version__`**: Library version string (e.g., `'2.1.14'`).
-- **`tentags.version_info`**: Version tuple for checking compatibility (e.g., `(2, 1, 14)`).
+- **`tentags.__version__`**: Library version string (e.g., `'2.1.15'`).
+- **`tentags.version_info`**: Version tuple for checking compatibility (e.g., `(2, 1, 15)`).
 - **`tentags.__author__`**: Author name (`'Zhandos Mambetali'`).
 - **`tentags.__license__`**: Project license (`'Apache-2.0'`).
 - **`tentags.__homepage__`**: Link to home website (`'https://tentags.org'`).

@@ -16,24 +16,19 @@ def test_basic_html_rendering():
     assert ">D</td>" in html
 
 def test_html_column_merges():
-    # Test column merge <cm> tag
+    # Test column merge <cm> tag translates to native colspan="2"
     expr = '1,3,1,"#000","solid",0,30, data(<cm>Merge, </cm>, Right)'
     html = tentags.render(expr)
     
-    # <cm> translates to border-right:none for the left cell
-    # and border-left:none for the right cell
-    assert "border-right:none;" in html
-    assert "border-left:none;" in html
+    assert 'colspan="2"' in html
     assert ">Merge</td>" in html
 
 def test_html_row_merges():
-    # Test row merge <rm> tag
+    # Test row merge <rm> tag translates to native rowspan="2"
     expr = '3,1,1,"#000","solid",0,30, data(<rm>Top</rm>; <rm> </rm>; Bottom)'
     html = tentags.render(expr)
     
-    # <rm> translates to border-bottom:none/border-top:none overrides
-    assert "border-bottom:none;" in html
-    assert "border-top:none;" in html
+    assert 'rowspan="2"' in html
     assert ">Top</td>" in html
     assert ">Bottom</td>" in html
 
